@@ -14,7 +14,9 @@
 
 ## 🌐 Live Demo
 
-**[https://aicf.duckdns.org/ss-monitor/](https://aicf.duckdns.org/ss-monitor/)** — the maintainer's production instance. See the five cards, chicken-themed UI, three-tier table limits, and zh-Hant / zh-Hans / EN switcher in action.
+**[https://aicf.duckdns.org/ss-monitor/](https://aicf.duckdns.org/ss-monitor/)**
+
+the maintainer's production instance. See the five cards, chicken-themed UI, three-tier table limits, and zh-Hant / zh-Hans / EN switcher in action.
 
 > The dashboard publicly exposes pool stats, scoring trends, the discovery queue, and source rankings, but **subscription files require a 32-hex token**. The demo is for friends only — if you want this kind of subscription, deploy your own.
 

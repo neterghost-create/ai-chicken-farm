@@ -14,8 +14,9 @@
 
 ## 🌐 在線演示
 
-**[https://aicf.duckdns.org/ss-monitor/](https://aicf.duckdns.org/ss-monitor/)** 
-— 這是維護者本人的生產實例，可以直接看 5 個卡片 + 雞主題 UI + 三檔限制 + 繁/簡/EN 切換的實際效果。
+**[https://aicf.duckdns.org/ss-monitor/](https://aicf.duckdns.org/ss-monitor/)**
+
+這是維護者本人的生產實例，可以直接看 5 個卡片 + 雞主題 UI + 三檔限制 + 繁/簡/EN 切換的實際效果。
 
 > 演示頁公開展示節點統計 / 評分趨勢 / 覓食隊列 / 飼料廠評分等，但**訂閱檔案需要 token 鑑權**（不公開）。如果你想用這套訂閱，請走項目部署一份自己的；這個演示站只給朋友用。
 
@@ -74,7 +75,9 @@ ai-chicken-farm/
 ├── README.md                  # 項目介紹 (本文件, 繁體中文)
 ├── README.en.md               # Project introduction (English)
 ├── DEPLOYMENT.md              # 詳細部署文檔 (74 KB, 20 章)
+├── CONTRIBUTING.md            # 貢獻指南 (中英雙語)
 ├── LICENSE                    # MIT
+├── .github/                   # CI / Issue 模板 / PR 模板
 ├── .gitignore                 # 排除 *.db, *.bak, *.log, 真實憑證
 └── snapshots/                 # 1:1 復原素材 (40 文件, 600 KB)
     ├── scripts/               # 11 個 Python 維護腳本 + DB schema + 配置
