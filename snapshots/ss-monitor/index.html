@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <title>AI養雞場 · 24h 直播</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🐔%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="app.css?v=20260527_1442">
+    <link rel="stylesheet" href="app.css?v=20260527_1538">
 </head>
 <body>
     <div class="container">
@@ -145,20 +145,6 @@
                 <div class="stat-tile"><div class="label">可用節點</div><div class="value" id="poolTotalNodes" style="color:var(--good);">—</div></div>
                 <div class="stat-tile" style="grid-column: span 2;"><div class="label">協議分佈</div><div class="chips" id="poolProtocols" style="margin-top:8px;"><span class="loading" style="padding:0;">加載中...</span></div></div>
                 <div class="stat-tile"><div class="label">上輪跑完</div><div class="value" id="poolLastRun" style="font-size:13px;">—</div></div>
-            </div>
-
-            <div class="section-title">📚 訂閱源評分庫</div>
-            <div class="kv-grid">
-                <div class="kv-row"><span class="k">已知源總數</span><span class="v" id="dbTotalSources">—</span></div>
-                <div class="kv-row"><span class="k">狀態分佈</span><span class="v" id="dbStatusCounts">—</span></div>
-                <div class="kv-row"><span class="k">上次同步</span><span class="v" id="dbLastSync">—</span></div>
-            </div>
-
-            <div style="margin-top:14px;">
-                <div style="font-size:12px; color:var(--text-2); margin-bottom:8px;">🌟 TOP 5 候選源 (按評分庫通過率)</div>
-                <div class="src-list" id="dbTopSources"><div class="loading">加載中...</div></div>
-                <div style="font-size:12px; color:var(--text-2); margin:14px 0 8px;">⛔ 黑名單源 (按解封時間)</div>
-                <div class="src-list" id="dbBlacklisted"><div class="loading">加載中...</div></div>
             </div>
 
             <div class="section-title">📈 輪次趨勢 (最近 20 輪)</div>
@@ -345,6 +331,20 @@
                 </div>
             </div>
 
+            <div class="section-title">📚 訂閱源評分庫</div>
+            <div class="kv-grid">
+                <div class="kv-row"><span class="k">已知源總數</span><span class="v" id="dbTotalSources">—</span></div>
+                <div class="kv-row"><span class="k">狀態分佈</span><span class="v" id="dbStatusCounts">—</span></div>
+                <div class="kv-row"><span class="k">上次同步</span><span class="v" id="dbLastSync">—</span></div>
+            </div>
+
+            <div style="margin-top:14px;">
+                <div style="font-size:12px; color:var(--text-2); margin-bottom:8px;">🌟 TOP 5 候選源 (按評分庫通過率)</div>
+                <div class="src-list" id="dbTopSources"><div class="loading">加載中...</div></div>
+                <div style="font-size:12px; color:var(--text-2); margin:14px 0 8px;">⛔ 黑名單源 (按解封時間)</div>
+                <div class="src-list" id="dbBlacklisted"><div class="loading">加載中...</div></div>
+            </div>
+
             <div class="section-title">📋 源級評分明細</div>
             <div class="toolbar">
                 <input type="text" id="srcFilter" placeholder="搜尋源 URL..." data-i18n-placeholder="src.search.placeholder">
@@ -426,6 +426,6 @@
 
     <button class="refresh-btn" id="refreshBtn" data-i18n-title="common.refresh" title="重新餵食 · 刷新所有數據">↻</button>
 
-    <script src="app.js?v=20260527_1442" defer></script>
+    <script src="app.js?v=20260527_1538" defer></script>
 </body>
 </html>
