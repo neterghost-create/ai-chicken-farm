@@ -15,7 +15,7 @@ jobs:
     name: Python syntax check (py_compile)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -44,7 +44,7 @@ jobs:
     name: Bash syntax check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: bash -n on every shell script
         run: |
@@ -68,7 +68,7 @@ jobs:
     name: YAML / config validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -105,7 +105,7 @@ jobs:
     name: nginx config syntax (best-effort)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install nginx
         run: sudo apt-get update -qq && sudo apt-get install -y -qq nginx
@@ -128,7 +128,7 @@ jobs:
     name: Markdown internal link check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Verify internal links in README files
         run: |
@@ -157,7 +157,7 @@ jobs:
     name: Secret leakage scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Scan for known secret patterns
         run: |
