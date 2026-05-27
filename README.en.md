@@ -139,4 +139,5 @@ MIT License — see [LICENSE](LICENSE)
 
 ---
 
-> This is a personal learning + friends-only project. **Not for commercial use.** Node data comes from public aggregators; quality is best-effort and not guaranteed.
+> This is a personal learning + friends-only project. **Not for commercial use.**
+> Node data comes from public aggregators; quality is best-effort and not guaranteed.
