@@ -422,7 +422,7 @@
                    score >= 55 ? 'var(--warn)' : 'var(--text-3)';
         }
         function scorePillClass(score) {
-            // v2.3 滿分制閾值: 90+ 優秀, 70+ 良好, 50+ 中等, <50 弱/危險
+            // v3.0 三态机阈值: ≥90 优秀, 70+ 良好, 50+ 中等 (testing 主区), <50 弱 (recovering 区)
             if (score >= 90) return 's-elite';
             if (score >= 70) return 's-good';
             if (score >= 50) return 's-mid';
@@ -930,9 +930,14 @@
                 const speedText = speedTextFor(n.speed_kbps);
                 const score = n.quality_score || 0;
                 const consecHigh = (n.consecutive || 0) >= 3 ? 'var(--good)' : 'var(--text-2)';
-                const blk = n.blacklisted ? ' ⛔' : '';
+                // v3.0: state 替代 blacklisted
+                const state = n.state || 'testing';
+                const stateBadge = state === 'decaying' ? '<span title="decaying: 满分顶到位, 被动衰减" style="color:var(--good); font-size:10px;">▼</span>' :
+                                   state === 'recovering' ? '<span title="recovering: 触底, 被动恢复" style="color:var(--err); font-size:10px;">▲</span>' :
+                                   '<span title="testing: 主测试态" style="color:var(--sky-400); font-size:10px;">●</span>';
+                const subTag = n.sub_tag ? `<div style="color:var(--text-3); font-size:10px; margin-top:2px;" title="${esc(n.sub_tag)}">${esc(n.sub_tag.length > 28 ? n.sub_tag.slice(0, 28) + '…' : n.sub_tag)}</div>` : '';
                 return `<tr>
-                    <td class="name-cell" title="${esc(n.name)}">${esc(n.name)}${blk}</td>
+                    <td class="name-cell" title="${esc(n.name)}${n.sub_tag ? ' (' + esc(n.sub_tag) + ')' : ''}">${stateBadge} ${esc(n.name)}${subTag}</td>
                     <td><span class="score-pill ${scorePillClass(score)}">${score.toFixed(0)}</span></td>
                     <td><span class="chip ${n.type}" style="font-size:10px;">${n.type}</span></td>
                     <td class="col-hide-sm">${n.region || '—'}</td>
@@ -1183,6 +1188,14 @@
                     known: `<span class="badge neutral"><span class="dot"></span>${t('status.known')}</span>`,
                 }[s.data_maturity] || '<span class="badge neutral">—</span>';
 
+                // v3.0: state 三态机优先显示, 同时保留 status 兼容
+                const state = s.state || 'testing';
+                const stateBadge = state === 'decaying'
+                    ? `<span class="badge ok" title="decaying: 满分顶到位, 被动衰减"><span class="dot"></span>▼ ${state}</span>`
+                    : state === 'recovering'
+                    ? `<span class="badge err" title="recovering: 触底, 被动恢复"><span class="dot"></span>▲ ${state}</span>`
+                    : `<span class="badge neutral" title="testing: 主测试态"><span class="dot"></span>● ${state}</span>`;
+
                 const statusBadge = s.status === 'blacklisted'
                     ? `<span class="badge err">${t('status.blacklisted')}</span>`
                     : s.status === 'whitelisted'
@@ -1198,7 +1211,7 @@
                     <td class="col-hide-sm" style="color:var(--text-2);">${s.latest_node_count ?? '—'}</td>
                     <td class="col-hide-sm" style="color:${streakColor}; font-weight:600;">${streak}</td>
                     <td>${matBadge}</td>
-                    <td class="col-hide-sm">${statusBadge}</td>
+                    <td class="col-hide-sm">${stateBadge}</td>
                     <td class="col-hide-sm">${buildSparkline(s.recent_trend)}</td>
                 </tr>`;
             }).join('') + renderLimitRow(7, 'srcTable', sources.length, take, limitInfo, renderSourceTable);

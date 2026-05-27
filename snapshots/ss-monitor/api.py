@@ -341,22 +341,33 @@ def get_history():
 
 @app.route('/api/free-pool/quality')
 def get_quality():
-    """节点级评分 TOP 排行 (从 history.db nodes_history 表)"""
+    """节点级评分 TOP 排行 (从 history.db nodes_history 表) — v3.0 三态机"""
     import sqlite3 as sq
     HISTORY_DB = "/opt/subs-check/scripts/history.db"
     if not os.path.exists(HISTORY_DB):
         return jsonify({'error': 'history.db not found'}), 503
     try:
         db = sq.connect(HISTORY_DB)
-        # 总览统计
+        # 总览
         total = db.execute("SELECT COUNT(*) FROM nodes_history").fetchone()[0]
+        # v3.0 状态分布
+        try:
+            state_rows = db.execute(
+                "SELECT state, COUNT(*) FROM nodes_history GROUP BY state"
+            ).fetchall()
+            state_counts = {(s or 'testing'): c for s, c in state_rows}
+            has_state = True
+        except sq.OperationalError:
+            state_counts = {}
+            has_state = False
+        # 兼容旧字段 (active / blacklisted)
         active = db.execute(
             "SELECT COUNT(*) FROM nodes_history WHERE blacklisted_until IS NULL"
         ).fetchone()[0]
         blacklisted = db.execute(
             "SELECT COUNT(*) FROM nodes_history WHERE blacklisted_until IS NOT NULL"
         ).fetchone()[0]
-        # 评分分布 (v2.3 满分制 100 起步, 单向减分)
+        # 评分分布
         bands = db.execute("""
             SELECT
               CASE
@@ -367,22 +378,41 @@ def get_quality():
                 ELSE '<30 (危险)'
               END as band,
               COUNT(*) as cnt
-            FROM nodes_history WHERE blacklisted_until IS NULL
+            FROM nodes_history
             GROUP BY band ORDER BY band DESC
         """).fetchall()
-        # TOP 30 高分节点
-        top = db.execute("""
-            SELECT canonical_sig, quality_score, total_appearances, consecutive_appearances,
-                   last_speed_kbps, avg_speed_kbps, incremental_pass, incremental_fail,
-                   region, protocol, sample_name, consecutive_low_quality_node, consecutive_fails
-            FROM nodes_history
-            WHERE blacklisted_until IS NULL
-            ORDER BY quality_score DESC, total_appearances DESC
-            LIMIT 30
-        """).fetchall()
-        # 黑名单节点
+        # TOP 30 高分节点 (v3.0: 加 state 字段)
+        if has_state:
+            top = db.execute("""
+                SELECT canonical_sig, quality_score, total_appearances, consecutive_appearances,
+                       last_speed_kbps, avg_speed_kbps, incremental_pass, incremental_fail,
+                       region, protocol, sample_name, consecutive_low_quality_node, consecutive_fails,
+                       COALESCE(state, 'testing') as state
+                FROM nodes_history
+                ORDER BY quality_score DESC, total_appearances DESC
+                LIMIT 30
+            """).fetchall()
+        else:
+            top = db.execute("""
+                SELECT canonical_sig, quality_score, total_appearances, consecutive_appearances,
+                       last_speed_kbps, avg_speed_kbps, incremental_pass, incremental_fail,
+                       region, protocol, sample_name, consecutive_low_quality_node, consecutive_fails
+                FROM nodes_history
+                WHERE blacklisted_until IS NULL
+                ORDER BY quality_score DESC, total_appearances DESC
+                LIMIT 30
+            """).fetchall()
+        # 低分节点 (v3.0: state=recovering 或 quality_score < 30)
         bl = db.execute("""
-            SELECT canonical_sig, blacklisted_until, region, protocol
+            SELECT canonical_sig, COALESCE(state, 'testing') as state, region, protocol,
+                   quality_score, sample_name
+            FROM nodes_history
+            WHERE quality_score < 30 OR state = 'recovering'
+            ORDER BY quality_score ASC
+            LIMIT 20
+        """ if has_state else """
+            SELECT canonical_sig, blacklisted_until as state, region, protocol,
+                   quality_score, sample_name
             FROM nodes_history
             WHERE blacklisted_until IS NOT NULL
             ORDER BY blacklisted_until
@@ -394,12 +424,13 @@ def get_quality():
                 'total': total,
                 'active': active,
                 'blacklisted': blacklisted,
+                'state_counts': state_counts,   # v3.0
             },
             'score_bands': [{'band': b, 'count': c} for b, c in bands],
             'top_nodes': [
                 {
                     'sig': r[0],
-                    'quality_score': round(r[1], 1),
+                    'quality_score': round(r[1], 1) if r[1] is not None else 50.0,
                     'appearances': r[2],
                     'consecutive': r[3],
                     'last_speed_kbps': r[4],
@@ -409,18 +440,23 @@ def get_quality():
                     'region': r[8],
                     'protocol': r[9],
                     'name': r[10],
-                    'lq_node': r[11],          # v2.3: 持续低质计数
-                    'cons_fails': r[12],       # v2.3: 探活/测速超时连续失败
+                    'lq_node': r[11] if r[11] is not None else 0,
+                    'cons_fails': r[12],
+                    'state': r[13] if has_state else 'testing',
                 } for r in top
             ],
             'blacklist': [
                 {
                     'sig': r[0],
-                    'until': r[1],
+                    'state': r[1],   # v3.0: state 名 (recovering 等)
                     'region': r[2],
                     'protocol': r[3],
+                    'quality_score': round(r[4], 1) if r[4] is not None else 0,
+                    'name': r[5],
                 } for r in bl
             ],
+            'rules_version': 'v3.0',
+            'state_threshold': 50,
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
@@ -442,7 +478,14 @@ def get_sources():
         return jsonify({'error': 'source-scores.db not found'}), 503
     try:
         db = sq.connect(SCORES_DB)
-        # 总览
+        # 总览 (v3.0: 用 state 而非 status, 但兼容旧 status 字段)
+        try:
+            rows = db.execute(
+                "SELECT state, COUNT(*) FROM sources GROUP BY state"
+            ).fetchall()
+            state_counts = {(s or 'testing'): c for s, c in rows}
+        except sq.OperationalError:
+            state_counts = {}
         rows = db.execute(
             "SELECT status, COUNT(*) FROM sources GROUP BY status"
         ).fetchall()
@@ -462,21 +505,42 @@ def get_sources():
         }
 
         # 全部源 + 最新一轮均分 (LEFT JOIN, 没评分的源也返回)
-        sources = db.execute("""
-            SELECT s.url, s.status, s.consecutive_low_quality, s.first_seen_round,
-                   s.blocked_until,
-                   (SELECT avg_quality_score FROM source_quality_history h
-                      WHERE h.source_url = s.url ORDER BY round_id DESC LIMIT 1) as latest_avg,
-                   (SELECT node_count FROM source_quality_history h
-                      WHERE h.source_url = s.url ORDER BY round_id DESC LIMIT 1) as latest_count,
-                   s.score, s.total_checks, s.total_passes, s.last_seen,
-                   s.consecutive_fails, s.consecutive_passes, s.low_score_total
-            FROM sources s
-            ORDER BY
-                (latest_avg IS NULL) ASC,    -- 有评分的排前
-                latest_avg DESC,
-                s.score DESC
-        """).fetchall()
+        # v3.0: 加上 state 字段
+        try:
+            sources = db.execute("""
+                SELECT s.url, s.status, s.consecutive_low_quality, s.first_seen_round,
+                       s.blocked_until,
+                       (SELECT avg_quality_score FROM source_quality_history h
+                          WHERE h.source_url = s.url ORDER BY round_id DESC LIMIT 1) as latest_avg,
+                       (SELECT node_count FROM source_quality_history h
+                          WHERE h.source_url = s.url ORDER BY round_id DESC LIMIT 1) as latest_count,
+                       s.score, s.total_checks, s.total_passes, s.last_seen,
+                       s.consecutive_fails, s.consecutive_passes, s.low_score_total,
+                       COALESCE(s.state, 'testing') as state
+                FROM sources s
+                ORDER BY
+                    (latest_avg IS NULL) ASC,
+                    latest_avg DESC,
+                    s.score DESC
+            """).fetchall()
+            has_state = True
+        except sq.OperationalError:
+            sources = db.execute("""
+                SELECT s.url, s.status, s.consecutive_low_quality, s.first_seen_round,
+                       s.blocked_until,
+                       (SELECT avg_quality_score FROM source_quality_history h
+                          WHERE h.source_url = s.url ORDER BY round_id DESC LIMIT 1) as latest_avg,
+                       (SELECT node_count FROM source_quality_history h
+                          WHERE h.source_url = s.url ORDER BY round_id DESC LIMIT 1) as latest_count,
+                       s.score, s.total_checks, s.total_passes, s.last_seen,
+                       s.consecutive_fails, s.consecutive_passes, s.low_score_total
+                FROM sources s
+                ORDER BY
+                    (latest_avg IS NULL) ASC,
+                    latest_avg DESC,
+                    s.score DESC
+            """).fetchall()
+            has_state = False
 
         # 历史分布: 最近 10 轮每源的均分趋势 (只对 scored 源有意义)
         trends = {}
@@ -509,41 +573,51 @@ def get_sources():
             sources_out.append({
                 'url': url,
                 'status': r[1],
-                'low_streak': r[2],            # consecutive_low_quality (③ 触发计数)
+                'state': r[14] if has_state else 'testing',  # v3.0
+                'low_streak': r[2],            # consecutive_low_quality (v2.3 遗留, v3 不用)
                 'first_seen_round': r[3],
                 'blocked_until': r[4],
                 'latest_avg_score': round(r[5], 1) if r[5] else None,
                 'latest_node_count': r[6],
-                'source_score': round(r[7], 1) if r[7] is not None else None,  # 源级元评分
+                'source_score': round(r[7], 1) if r[7] is not None else None,
                 'total_checks': r[8],
                 'total_passes': r[9],
                 'last_seen': r[10],
-                'cons_fails': r[11],           # v2.3: ① ② 触发计数
-                'cons_passes': r[12],          # v2.3: 升白触发计数
-                'low_score_total': r[13],      # v2.3: ④ 触发计数 (累计低分轮数)
+                'cons_fails': r[11],
+                'cons_passes': r[12],
+                'low_score_total': r[13],
                 'data_maturity': maturity,
                 'recent_trend': trends.get(url, []),
             })
 
         return jsonify({
             'status_counts': status_counts,
+            'state_counts': state_counts,    # v3.0: testing / decaying / recovering
             'maturity_counts': maturity_counts,
             'total_sources': len(sources_out),
             'sources': sources_out,
-            # v2.3 阈值元数据 (前端展示用)
-            'rules_version': 'v2.3',
-            'kill_threshold_lq': 5,            # ③ lq streak 阈值
-            'kill_threshold_lst': 15,          # ④ low_score_total 阈值
-            'fail_threshold_candidate': 3,     # ① fails 阈值
-            'fail_threshold_whitelist': 60,    # ② fails 阈值
-            'low_score_cutoff': 30,            # ④ score < 此值算 1 轮
-            'pass_threshold_promote': 30,      # 升白阈值
+            # v3.0 阈值元数据 (前端展示用)
+            'rules_version': 'v3.0',
+            'state_threshold': 50,             # 三态机阈值 (decaying/recovering ↔ testing)
+            'default_score': 50,               # v3.0: 中点起步
+            'fetch_ok_bonus': 3,
+            'fetch_empty_penalty': 5,
+            'fetch_fail_penalty': 10,
+            'fetch_timeout_penalty': 8,
+            'nq_high_bonus': 2,
+            'nq_low_penalty': 3,
+            'nq_terrible_penalty': 8,
+            'low_score_cutoff': 30,            # 报告阈值
+            'low_quality_cutoff': 50,          # 节点质量分档分界
+            # 兼容旧前端字段 (v2.3 命名, 仍渲染但不再触发拉黑)
+            'kill_threshold_lq': 5,
+            'kill_threshold_lst': 15,
+            'fail_threshold_candidate': 3,
+            'fail_threshold_whitelist': 60,
+            'pass_threshold_promote': 30,
             'blacklist_days': 30,
-            'default_score': 100,
-            # 兼容旧前端字段 (v1 命名)
             'kill_threshold': 5,
-            'low_quality_cutoff': 50,          # v2.3 节点 quality_score 50 是分档分界
-            'grace_period_rounds': 0,          # v2.3 取消 grace 期 (满分起步本身就是 grace)
+            'grace_period_rounds': 0,
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:

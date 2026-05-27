@@ -175,7 +175,7 @@
                     <thead>
                         <tr>
                             <th data-i18n="node.col.name">名稱</th>
-                            <th data-i18n="node.col.quality" title="0-100分 · v2.3: 100 分起步 + 信號 ABC (探活/輪次/測速) 單向減分">質量</th>
+                            <th data-i18n="node.col.quality" title="0-100分 · v3.0 三态机: testing 主测态(50起跑) ↔ decaying(顶100下降) ↔ recovering(底0回升) · 信号 ABC (探活/轮次/测速) 累加">質量</th>
                             <th data-i18n="node.col.protocol">協議</th>
                             <th class="col-hide-sm" data-i18n="node.col.region">地區</th>
                             <th data-i18n="node.col.speed">測速</th>
@@ -251,8 +251,8 @@
             <div class="card-head">
                 <div class="card-title green"><div class="ico">🌽</div><span data-i18n="quality.title">飼料</span></div>
                 <div class="card-meta">
-                  <span style="color:var(--good); font-weight:600;">v2.3 飼養規則</span> ·
-                  默認 score=100 單向減分 ·
+                  <span style="color:var(--good); font-weight:600;">v3.0 三態機飼養規則</span> ·
+                  testing(主測, 50起跑) ↔ decaying(▼) ↔ recovering(▲) ·
                   探活/未出現/慢速 → 扣分 ·
                   連續 4 次探活/測速失敗 → ① 隔離 48h ·
                   連續 5 輪 score &lt; 30 → ② 隔離 48h ·
@@ -302,9 +302,10 @@
             <div class="card-head">
                 <div class="card-title amber"><div class="ico">🏭</div><span data-i18n="src.title">飼料廠</span></div>
                 <div class="card-meta">
-                  <span style="color:var(--good); font-weight:600;">v2.3 飼養規則</span> ·
-                  默認 score=100, 單向減分 ·
-                  <code id="srcKillThreshold">5</code> 輪節點均分 &lt; <code id="srcLowCutoff">50</code> → ③ 拉黑 ·
+                  <span style="color:var(--good); font-weight:600;">v3.0 三態機</span> ·
+                  默認 score=50 中點起跑 ·
+                  testing 主測 ↔ decaying(▼) ↔ recovering(▲) · 無黑名單 ·
+                  fetch_ok +3 / fail -10 / empty -5 ·
                   累計 <code id="srcKillTotal">15</code> 輪 score &lt; <code id="srcLowScoreCutoff">30</code> → ④ 拉黑 ·
                   連續 <code id="srcFailThreshold">3</code> 次拉取失敗 → ① 拉黑 ·
                   黑名單 30 天到期重返雞舍
@@ -372,7 +373,7 @@
                             <th data-i18n="src.col.nodeCount" class="col-hide-sm" title="該飼料源貢獻的節點數">節點</th>
                             <th data-i18n="src.col.lowStreak" class="col-hide-sm" title="連續被嫌棄幾輪 · 連續低分輪次, 滿 5 → 拉黑">低分</th>
                             <th data-i18n="src.col.maturity">成熟度</th>
-                            <th data-i18n="src.col.status" class="col-hide-sm">狀態</th>
+                            <th data-i18n="src.col.status" class="col-hide-sm" title="v3.0 三態機: testing(主測) ↔ decaying(▼) ↔ recovering(▲)">態勢</th>
                             <th data-i18n="src.col.trend" class="col-hide-sm" title="最近 10 輪均分 sparkline">趨勢</th>
                         </tr>
                     </thead>
