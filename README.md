@@ -2,6 +2,8 @@
 
 > 在小内存 VPS 上自動發現 + 清洗 + 評分 + 展示公益免費代理節點，給朋友提供穩定訂閱
 
+[繁體中文](README.md) · [English](README.en.md)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux-blue.svg)]()
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10+-green.svg)]()
@@ -68,7 +70,8 @@ less DEPLOYMENT.md     # 跳到 §11 「1:1 部署步驟 (從零拉起)」
 
 ```
 ai-chicken-farm/
-├── README.md                  # 項目介紹 (本文件)
+├── README.md                  # 項目介紹 (本文件, 繁體中文)
+├── README.en.md               # Project introduction (English)
 ├── DEPLOYMENT.md              # 詳細部署文檔 (74 KB, 20 章)
 ├── LICENSE                    # MIT
 ├── .gitignore                 # 排除 *.db, *.bak, *.log, 真實憑證
