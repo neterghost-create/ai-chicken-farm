@@ -1092,11 +1092,13 @@
                 __srcThresholds.kill_total = d.kill_threshold_lst ?? 15;
                 __srcThresholds.low_score = d.low_score_cutoff ?? 30;
                 __srcThresholds.fail = d.fail_threshold_candidate ?? 3;
-                $id('srcKillThreshold').textContent = __srcThresholds.kill;
-                $id('srcLowCutoff').textContent = __srcThresholds.cutoff;
-                const _kt = $id('srcKillTotal');       if (_kt) _kt.textContent = __srcThresholds.kill_total;
-                const _lc = $id('srcLowScoreCutoff');  if (_lc) _lc.textContent = __srcThresholds.low_score;
-                const _ft = $id('srcFailThreshold');   if (_ft) _ft.textContent = __srcThresholds.fail;
+                // v3.0: srcKillThreshold / srcLowCutoff 已从 index.html 移除 (改 v3.0 三态机文案)
+                // 这里全部加 null 检查防御
+                const _ks = $id('srcKillThreshold');    if (_ks) _ks.textContent = __srcThresholds.kill;
+                const _ko = $id('srcLowCutoff');        if (_ko) _ko.textContent = __srcThresholds.cutoff;
+                const _kt = $id('srcKillTotal');        if (_kt) _kt.textContent = __srcThresholds.kill_total;
+                const _lc = $id('srcLowScoreCutoff');   if (_lc) _lc.textContent = __srcThresholds.low_score;
+                const _ft = $id('srcFailThreshold');    if (_ft) _ft.textContent = __srcThresholds.fail;
 
                 // 成熟度統計
                 const mc = d.maturity_counts || {};
