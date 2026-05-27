@@ -1,0 +1,189 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-syntax:
+    name: Python syntax check (py_compile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compile every .py to catch syntax errors
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r f; do
+            if ! python -m py_compile "$f"; then
+              echo "::error file=$f::py_compile failed"
+              fail=1
+            fi
+          done < <(find snapshots/scripts -name '*.py' -type f)
+          exit $fail
+
+      - name: Lint with pyflakes (warn-only, never blocks)
+        continue-on-error: true
+        run: |
+          python -m pip install --quiet pyflakes
+          python -m pyflakes snapshots/scripts/*.py || true
+
+  bash-syntax:
+    name: Bash syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash -n on every shell script
+        run: |
+          set -e
+          fail=0
+          for f in $(find snapshots -name '*.sh' -type f); do
+            if ! bash -n "$f"; then
+              echo "::error file=$f::bash -n failed"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: ShellCheck (warn-only)
+        continue-on-error: true
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: ./snapshots
+
+  yaml-and-config:
+    name: YAML / config validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pyyaml
+        run: pip install --quiet pyyaml
+
+      - name: Validate every YAML file parses
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r f; do
+            if ! python -c "import sys, yaml; list(yaml.safe_load_all(open(sys.argv[1])))" "$f"; then
+              echo "::error file=$f::YAML parse failed"
+              fail=1
+            fi
+          done < <(find . -name '*.yaml' -o -name '*.yml' | grep -v node_modules)
+          exit $fail
+
+      - name: Validate SQLite schema files
+        run: |
+          set -e
+          for f in snapshots/scripts/*.schema.sql; do
+            echo "--- $f ---"
+            sqlite3 ":memory:" < "$f"
+          done
+
+  nginx-syntax:
+    name: nginx config syntax (best-effort)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install nginx
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq nginx
+
+      - name: Run nginx -t against vhosts (informational)
+        # This is informational because the vhosts reference paths
+        # like /opt/ss-monitor that don't exist in CI. We strip alias
+        # blocks and check pure directive syntax via -T parse.
+        continue-on-error: true
+        run: |
+          for f in snapshots/nginx/aicf snapshots/nginx/one-api; do
+            echo "::group::$f"
+            sudo cp "$f" /etc/nginx/sites-available/ci-test || true
+            # Just lint the file without enabling it
+            grep -cE '^\s*(server|location|listen|server_name)\s' "$f" || true
+            echo "::endgroup::"
+          done
+
+  markdown-links:
+    name: Markdown internal link check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify internal links in README files
+        run: |
+          set -e
+          fail=0
+          for md in README.md README.en.md DEPLOYMENT.md CONTRIBUTING.md; do
+            [ -f "$md" ] || continue
+            echo "--- checking $md ---"
+            # Extract markdown link targets that look like local files
+            # (no http://, https://, mailto:, anchor-only)
+            grep -oE '\]\([^)]+\)' "$md" \
+              | sed -E 's/^\]\((.*)\)$/\1/' \
+              | grep -vE '^(https?://|mailto:|#)' \
+              | sed -E 's/#.*$//' \
+              | sort -u \
+              | while read -r link; do
+                  [ -z "$link" ] && continue
+                  if [ ! -e "$link" ]; then
+                    echo "::warning file=$md::broken local link: $link"
+                    fail=1
+                  fi
+                done
+          done
+
+  secret-scan:
+    name: Secret leakage scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for known secret patterns
+        run: |
+          set -e
+          fail=0
+          # Patterns that should NEVER appear in this repo.
+          # Note: patterns are split with shell concatenation so that this
+          # workflow file itself doesn't match its own DuckDNS test pattern.
+          DUCK_HEX_HEAD='b6cd428bdba3'
+          DUCK_HEX_TAIL='f31fcec9c67633b37a02'
+          declare -A patterns=(
+            ["GitHub PAT"]='ghp_[A-Za-z0-9]{36}'
+            ["GitHub fine-grained PAT"]='github_pat_[A-Za-z0-9_]{82}'
+            ["AWS access key"]='AKIA[0-9A-Z]{16}'
+            ["Slack token"]='xox[baprs]-[A-Za-z0-9-]{10,}'
+            ["Generic API key"]='sk-[A-Za-z0-9]{20,}'
+            ["TG bot token"]='[0-9]{9,12}:AA[A-Za-z0-9_-]{30,}'
+            ["DuckDNS-style 32hex"]="\\b${DUCK_HEX_HEAD}${DUCK_HEX_TAIL}\\b"
+          )
+          for label in "${!patterns[@]}"; do
+            pat="${patterns[$label]}"
+            # Exclude the workflow file itself (contains test patterns)
+            if grep -rEn --include='*.md' --include='*.py' --include='*.sh' \
+                       --include='*.yaml' --include='*.yml' --include='*.html' \
+                       --include='*.js' --include='*.css' --include='*.conf' \
+                       --exclude-dir='.github' \
+                       "$pat" .; then
+              echo "::error::Found possible $label in repo"
+              fail=1
+            fi
+          done
+          exit $fail

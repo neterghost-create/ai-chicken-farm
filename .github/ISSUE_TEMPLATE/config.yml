@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 DEPLOYMENT.md (詳細部署文檔)
+    url: https://github.com/neterghost-create/ai-chicken-farm/blob/main/DEPLOYMENT.md
+    about: 20 章 / 76 KB 部署手冊, 9 場景故障排查 cheatsheet。九成問題的答案都在這裡。
+  - name: 🌐 Live Demo
+    url: https://aicf.duckdns.org/ss-monitor/
+    about: 維護者本人的生產實例, 看 UI 和功能效果。訂閱檔案需要 token, 不公開。
+  - name: 💬 GitHub Discussions
+    url: https://github.com/neterghost-create/ai-chicken-farm/discussions
+    about: (尚未啟用) 開放討論、分享部署經驗、求助。

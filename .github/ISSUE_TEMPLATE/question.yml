@@ -1,0 +1,45 @@
+name: ❓ Question
+description: 用法疑問 / 部署細節提問 / Usage or deployment question
+title: "[Question] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提問前請先讀:
+        1. [DEPLOYMENT.md](../blob/main/DEPLOYMENT.md) — 20 章詳細部署文檔
+        2. [DEPLOYMENT.md §13](../blob/main/DEPLOYMENT.md) — 故障排查 cheatsheet
+        3. [snapshots/scripts/SCORING_RULES_v2.md](../blob/main/snapshots/scripts/SCORING_RULES_v2.md) — 評分機制完整規則
+
+        如果你的問題答案在裡面, 通常會被以「請看 §X」回覆。
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 你的問題 / Your question
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: 你嘗試過什麼 / What have you tried?
+      description: 看過哪幾章, 跑過什麼命令
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 問題領域 / Question area
+      options:
+        - 部署 (deployment)
+        - 評分機制 (scoring)
+        - ss-monitor 前端
+        - 訂閱使用 (subscription URL / format)
+        - cron 編排
+        - 安全 / 鑑權
+        - CGNAT / 域名 / TLS
+        - 其他
+    validations:
+      required: true

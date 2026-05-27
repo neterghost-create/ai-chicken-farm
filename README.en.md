@@ -77,7 +77,9 @@ ai-chicken-farm/
 ├── README.md                  # 中文介紹 (default landing)
 ├── README.en.md               # English introduction (this file)
 ├── DEPLOYMENT.md              # Full deployment manual (74 KB, 20 chapters)
+├── CONTRIBUTING.md            # Contribution guide (bilingual)
 ├── LICENSE                    # MIT
+├── .github/                   # CI workflow + issue / PR templates
 ├── .gitignore                 # excludes *.db, *.bak, *.log, real credentials
 └── snapshots/                 # 1:1 restore artefacts (40 files, 600 KB)
     ├── scripts/               # 11 Python maintenance scripts + DB schema + configs

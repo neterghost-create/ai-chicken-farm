@@ -1,0 +1,112 @@
+name: 🐛 Bug Report
+description: 部署或運行時遇到具體錯誤 / Report a deployment or runtime bug
+title: "[Bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感謝報告 bug！請先確認:
+        1. 已讀過 [DEPLOYMENT.md §13 故障排查](../blob/main/DEPLOYMENT.md) 9 個常見場景
+        2. 已搜過現有 issue
+        3. 不要貼真實的 token / 域名 / IP, 用 `<your-token>` 之類占位符
+
+        Thanks for reporting! Please confirm:
+        1. You have read [DEPLOYMENT.md §13 troubleshooting](../blob/main/DEPLOYMENT.md)
+        2. You have searched existing issues
+        3. Do NOT paste real tokens / domains / IPs — use placeholders like `<your-token>`
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 發生了什麼 / What happened?
+      description: 簡短描述問題 / Brief description
+      placeholder: 例如：subs-check 啟動 30s 後 OOM kill / e.g. ss-monitor returns 502 after restart
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 復現步驟 / Steps to reproduce
+      description: 一步步說明 / Step by step
+      placeholder: |
+        1. 跑 sync-lza6.py
+        2. systemctl start subs-check
+        3. 等 30s 後...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 預期行為 / Expected behavior
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: 涉及組件 / Affected component
+      multiple: true
+      options:
+        - subs-check 主二進制
+        - sync-lza6.py
+        - convert-formats.py
+        - source-fetcher.py
+        - incremental-check.py
+        - notify-telegram.py
+        - weekly-recovery.py
+        - discover-airports.py
+        - audit-cleanup.py
+        - ss-monitor api.py
+        - ss-monitor 前端 (HTML/CSS/JS)
+        - nginx vhost
+        - cron 編排
+        - SQLite schema
+        - 文檔 (DEPLOYMENT.md / README)
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系統 / OS
+      placeholder: Debian 12 / Ubuntu 22.04 / ...
+    validations:
+      required: true
+
+  - type: input
+    id: ram
+    attributes:
+      label: VPS RAM
+      placeholder: 1.8 GB / 2 GB / ...
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相關日誌 / Relevant logs
+      description: 貼日誌請去敏 (token / 域名 / IP)
+      render: shell
+      placeholder: |
+        # 例如:
+        # tail /var/log/subs-check-convert.log
+        # journalctl -u subs-check -n 50
+
+  - type: textarea
+    id: extras
+    attributes:
+      label: 補充說明 / Additional context
+      placeholder: 改過什麼配置, 何時開始出現, 任何相關信息
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 確認事項 / Checklist
+      options:
+        - label: 我已讀過 DEPLOYMENT.md §13 故障排查 / I read the troubleshooting cheatsheet
+          required: true
+        - label: 我已搜過現有 issue / I searched existing issues
+          required: true
+        - label: 我貼的日誌已去敏 (無真實 token / 域名 / IP) / Logs are sanitized
+          required: true
