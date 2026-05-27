@@ -162,10 +162,17 @@ def get_subs_check_progress():
     窗口必须 > check-interval (默认 6h), 否则两轮之间的空窗会让上一轮
     最后一行进度被滑出窗口, 当前轮还没出第一条 '流水线: 测活' 时
     progress 全空 → 前端显示 '-'.
+
+    按时序处理事件 (不再用 tail -3 截断):
+      流水线: 测活 ...   → 更新 tested/total/alive/...; completed=False (新一轮启动)
+      检测完成           → completed=True
+      下次检查时间: ...  → next_check
+    新一轮的 '流水线: 测活' 会自然把 completed 翻回 False, 避免 tail -3 残留
+    上轮 '检测完成' 让前端在新一轮前 ~6 分钟仍显示 ✓ 已完成.
     """
     output = run_command(
         "journalctl -u subs-check --no-pager --since '8 hours ago' -o cat 2>&1 "
-        "| grep -E '流水线: 测活|检测完成|下次检查' | tail -3"
+        "| grep -E '流水线: 测活|检测完成|下次检查'"
     )
     lines = output.split('\n') if output else []
     progress = {
@@ -185,8 +192,12 @@ def get_subs_check_progress():
             progress['alive'] = int(m.group(3))
             progress['media_pass'] = int(m.group(4))
             progress['speed_pass'] = int(m.group(5))
+            # 新一轮启动 → 翻回 running, 抹掉上轮残留的 completed
+            progress['completed'] = False
+            continue
         if '检测完成' in line:
             progress['completed'] = True
+            continue
         m2 = re.search(r'下次检查时间: (\S+ \S+)', line)
         if m2:
             progress['next_check'] = m2.group(1)

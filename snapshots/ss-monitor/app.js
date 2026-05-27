@@ -32,6 +32,9 @@
                 'pool.section.diff': '🔄 上輪 vs 這輪 Diff',
                 'pool.section.nodeTable': '📋 當前輪節點表',
                 'pool.tested': '測活', 'pool.alive': '存活', 'pool.media': '媒體通過', 'pool.speed': '測速 ≥512KB/s',
+                'pool.pipeline.running': '運行中', 'pool.pipeline.idle': '待機', 'pool.pipeline.unknown': '—',
+                'pool.tested.completed.eta': '✓ 已完成', 'pool.tested.completed.suffix': '下輪 {eta} 後',
+                'pool.tested.completed.imminent': '即將開始', 'pool.tested.completed.fallback': '共檢測 {n} 個',
                 'pool.totalNodes': '可用節點', 'pool.protocols': '協議分布', 'pool.lastRun': '上輪跑完',
                 'pool.dbTotal': '已知源總數', 'pool.dbStatus': '狀態分布', 'pool.dbLastSync': '上次同步',
                 'pool.topSources': '🌟 TOP 5 候選源 (按評分庫通過率)',
@@ -129,6 +132,9 @@
                 'pool.section.diff': '🔄 上轮 vs 这轮 Diff',
                 'pool.section.nodeTable': '📋 当前轮节点表',
                 'pool.tested': '测活', 'pool.alive': '存活', 'pool.media': '媒体通过', 'pool.speed': '测速 ≥512KB/s',
+                'pool.pipeline.running': '运行中', 'pool.pipeline.idle': '待机', 'pool.pipeline.unknown': '—',
+                'pool.tested.completed.eta': '✓ 已完成', 'pool.tested.completed.suffix': '下轮 {eta} 后',
+                'pool.tested.completed.imminent': '即将开始', 'pool.tested.completed.fallback': '共检测 {n} 个',
                 'pool.totalNodes': '可用节点', 'pool.protocols': '协议分布', 'pool.lastRun': '上轮跑完',
                 'pool.dbTotal': '已知源总数', 'pool.dbStatus': '状态分布', 'pool.dbLastSync': '上次同步',
                 'pool.topSources': '🌟 TOP 5 候选源 (按评分库通过率)',
@@ -219,6 +225,9 @@
                 'pool.section.diff': '🔄 Last Round vs This Round Diff',
                 'pool.section.nodeTable': '📋 Current Round Nodes',
                 'pool.tested': 'Tested', 'pool.alive': 'Alive', 'pool.media': 'Media OK', 'pool.speed': 'Speed ≥512KB/s',
+                'pool.pipeline.running': 'Running', 'pool.pipeline.idle': 'Idle', 'pool.pipeline.unknown': '—',
+                'pool.tested.completed.eta': '✓ Done', 'pool.tested.completed.suffix': 'next in {eta}',
+                'pool.tested.completed.imminent': 'starting soon', 'pool.tested.completed.fallback': '{n} checked',
                 'pool.totalNodes': 'Available', 'pool.protocols': 'Protocols', 'pool.lastRun': 'Last Round',
                 'pool.dbTotal': 'Known Sources', 'pool.dbStatus': 'Status Dist', 'pool.dbLastSync': 'Last Sync',
                 'pool.topSources': '🌟 TOP 5 Candidate Sources (by pass rate)',
@@ -688,11 +697,48 @@
                 $id('poolNextCheck').textContent =
                     (d.progress && d.progress.next_check) || (d.progress && d.progress.completed ? '等待下一輪' : '檢測中');
 
-                // 進度 - completed=true 時顯示"已完成 · 共檢測 N 個", 不顯示 stale 進度條
+                // 進度 - completed=true 時顯示"已完成 · 下輪 X 後"; running 時顯示 N/M · pct%
+                // 配合「測活」label 旁的 badge: 運行中 / 待機 / —
                 // (tested 數字在最後幾秒 subs-check 切換日誌格式後不再更新, 顯示出來會誤導)
                 const prog = d.progress || {};
+
+                // ---- 計算 ETA (用於 idle 倒數 + hero 也共用) ----
+                let etaText = null;       // "5h21m" / "21m" / null
+                let etaImminent = false;  // next_check 已過 → 即將開始
+                if (prog.next_check) {
+                    const nextMs = new Date(prog.next_check.replace(' ', 'T')).getTime() - Date.now();
+                    if (nextMs > 0) {
+                        const mins = Math.floor(nextMs / 60000);
+                        const hours = Math.floor(mins / 60);
+                        const remMins = mins % 60;
+                        etaText = hours > 0 ? `${hours}h${remMins}m` : `${remMins}m`;
+                    } else {
+                        etaImminent = true;
+                    }
+                }
+
+                // ---- pipeline status badge ----
+                const pipelineBadge = $id('poolPipelineStatus');
                 if (prog.completed) {
-                    $id('poolTested').innerHTML = `<span style="color:var(--good);">✓ 已完成</span><small style="font-size:12px; color:var(--text-3);"> · 共檢測 ${prog.total ?? 0} 個</small>`;
+                    setBadge(pipelineBadge, t('pool.pipeline.idle'), 'warn');
+                } else if (prog.tested != null && prog.total != null) {
+                    setBadge(pipelineBadge, t('pool.pipeline.running'), 'ok live');
+                } else {
+                    setBadge(pipelineBadge, t('pool.pipeline.unknown'), '');
+                }
+
+                // ---- poolTested 主數字 ----
+                if (prog.completed) {
+                    let suffix;
+                    if (etaText) {
+                        suffix = t('pool.tested.completed.suffix').replace('{eta}', etaText);
+                    } else if (etaImminent) {
+                        suffix = t('pool.tested.completed.imminent');
+                    } else {
+                        // 沒有 next_check → fallback 顯示總檢測數 (兼容老路徑)
+                        suffix = t('pool.tested.completed.fallback').replace('{n}', prog.total ?? 0);
+                    }
+                    $id('poolTested').innerHTML = `<span style="color:var(--good);">${t('pool.tested.completed.eta')}</span><small style="font-size:12px; color:var(--text-3);"> · ${suffix}</small>`;
                 } else if (prog.tested != null && prog.total != null) {
                     const pct = ((prog.tested / prog.total) * 100).toFixed(1);
                     $id('poolTested').innerHTML = `${prog.tested}/${prog.total}<small style="font-size:12px; color:var(--text-3);"> · ${pct}%</small>`;
@@ -1217,14 +1263,17 @@
                 const ad = fmtKind('source_audit', 'score < 80 才掃');
                 setText('discoverKindAudit', ad.val); setText('discoverKindAuditHint', ad.hint);
 
-                // 最近 7 天新增源
+                // 最近 7 天新增源 (三檔: 5 → 20 → 全部, 與其他列表統一)
                 const addedEl = $id('discoverRecentAdded');
                 if (addedEl) {
                     const items = d.recent_added_7d || [];
                     if (items.length === 0) {
                         addedEl.innerHTML = `<div class="empty" style="padding:14px; color:var(--text-3); font-size:12px;">${t('discover.empty.added')}</div>`;
                     } else {
-                        addedEl.innerHTML = items.slice(0, 20).map(s => {
+                        const stage = getTableStage('discoverRecentAdded');
+                        const limitInfo = computeLimit(stage, items.length, 20);
+                        const { take } = limitInfo;
+                        addedEl.innerHTML = items.slice(0, take).map(s => {
                             const shortUrl = s.url.length > 80 ? s.url.slice(0, 80) + '…' : s.url;
                             const fs = s.first_seen ? new Date(s.first_seen).toLocaleDateString('zh-Hant') : '—';
                             return `<div class="src-row" title="${esc(s.url)}">
@@ -1232,11 +1281,11 @@
                                 <span class="pass" style="color:var(--text-3);">${fs}</span>
                                 <span style="color:var(--text-2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(shortUrl)}</span>
                             </div>`;
-                        }).join('') + (items.length > 20 ? `<div style="font-size:11px; color:var(--text-3); padding:6px 8px;">... 另 ${items.length - 20} 條</div>` : '');
+                        }).join('') + renderLimitDiv('discoverRecentAdded', items.length, take, limitInfo, () => loadDiscover());
                     }
                 }
 
-                // 審計事件
+                // 審計事件 (三檔: 5 → 20 → 全部)
                 const auditEl = $id('discoverAuditList');
                 if (auditEl) {
                     const items = d.audit_recent_20 || [];
@@ -1245,7 +1294,10 @@
                     } else {
                         const sevColor = sev => sev === 'critical' ? 'var(--err)' : sev === 'warn' ? 'var(--warn)' : 'var(--text-3)';
                         const sevIcon = sev => sev === 'critical' ? '🚨' : sev === 'warn' ? '⚠️' : 'ℹ️';
-                        auditEl.innerHTML = items.map(a => {
+                        const stage = getTableStage('discoverAuditList');
+                        const limitInfo = computeLimit(stage, items.length, 20);
+                        const { take } = limitInfo;
+                        auditEl.innerHTML = items.slice(0, take).map(a => {
                             const shortUrl = a.source_url.length > 60 ? a.source_url.slice(0, 60) + '…' : a.source_url;
                             const at = a.audited_at ? new Date(a.audited_at).toLocaleString('zh-Hant', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
                             return `<div class="src-row" title="${esc(a.source_url)}\n${esc(a.finding || '')}">
@@ -1254,7 +1306,7 @@
                                 <span style="color:var(--text-2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(shortUrl)}</span>
                                 <span class="pass" style="color:${sevColor(a.severity)};">${esc(a.finding || a.severity)}</span>
                             </div>`;
-                        }).join('');
+                        }).join('') + renderLimitDiv('discoverAuditList', items.length, take, limitInfo, () => loadDiscover());
                     }
                 }
 
