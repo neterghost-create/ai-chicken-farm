@@ -95,7 +95,10 @@ jobs:
           set -e
           for f in snapshots/scripts/*.schema.sql; do
             echo "--- $f ---"
-            sqlite3 ":memory:" < "$f"
+            # Filter out CREATE TABLE sqlite_sequence — that's SQLite's
+            # internal auto-managed table and cannot be created by user SQL.
+            # The line exists because .schema dumps include it.
+            grep -v 'CREATE TABLE sqlite_sequence' "$f" | sqlite3 ":memory:"
           done
 
   nginx-syntax:
