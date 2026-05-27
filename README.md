@@ -8,6 +8,13 @@
 [![Release](https://img.shields.io/github/v/release/neterghost-create/ai-chicken-farm?label=release&color=orange)](https://github.com/neterghost-create/ai-chicken-farm/releases/latest)
 [![Last Commit](https://img.shields.io/github/last-commit/neterghost-create/ai-chicken-farm?color=informational)](https://github.com/neterghost-create/ai-chicken-farm/commits/main)
 [![Stars](https://img.shields.io/github/stars/neterghost-create/ai-chicken-farm?style=social)](https://github.com/neterghost-create/ai-chicken-farm/stargazers)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-aicf.duckdns.org-success?logo=googlechrome&logoColor=white)](https://aicf.duckdns.org/ss-monitor/)
+
+## 🌐 在線演示
+
+**[https://aicf.duckdns.org/ss-monitor/](https://aicf.duckdns.org/ss-monitor/)** — 這是維護者本人的生產實例，可以直接看 5 個卡片 + 雞主題 UI + 三檔限制 + 繁/簡/EN 切換的實際效果。
+
+> 演示頁公開展示節點統計 / 評分趨勢 / 覓食隊列 / 飼料廠評分等，但**訂閱檔案需要 token 鑑權**（不公開）。如果你想用這套訂閱，請走項目部署一份自己的；這個演示站只給朋友用。
 
 ## 這是什麼
 
