@@ -1,65 +1,66 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-weekly-recovery.py — v2.3 源级周期恢复
+weekly-recovery.py — v3.0 三态机周期恢复
 
-每周日 03:00 跑一次:
-  candidate AND consecutive_fails=0 AND consecutive_low_quality=0 AND low_score_total=0
-  → score = MIN(100, score + 5)
+每周日 03:00 跑一次. v3.0 设计下, recovering 状态已经自动 +1±0.3 每轮恢复,
+不再需要 v2.3 那种"6 周无故障奖励 +5"的恢复逻辑.
 
-防止"一次失误永久惩罚":
-  - 一次失误扣到 70 分后, 6 周无故障即恢复到 100
-  - 已经 100 的源不变 (cap)
-  - 有任何故障/低质标记的源不参与恢复 (避免奖励垃圾)
+本脚本现在仅做:
+  1. 修复孤立状态: state IS NULL 的源 → 'testing'
+  2. 修复 score 越界: < 0 → 0, > 100 → 100
+  3. 兜底: testing 状态下 score 长期停在 0-30 区间 (recovering 没起作用) → 强制 state='recovering'
+  4. 报告各状态分布快照
 """
 import sys
 import sqlite3
 from datetime import datetime, timezone
 
 SOURCES_DB = "/opt/subs-check/scripts/source-scores.db"
-RECOVERY_AMOUNT = 5
 
 
 def main():
     db = sqlite3.connect(SOURCES_DB)
 
-    # 跑前快照
-    before = db.execute("""
-        SELECT COUNT(*), AVG(score), MIN(score), MAX(score)
-        FROM sources
-        WHERE status='candidate'
-          AND consecutive_fails = 0
-          AND consecutive_low_quality = 0
-          AND low_score_total = 0
-    """).fetchone()
-    n_eligible, avg_before, min_before, max_before = before
+    # 1. 修复孤立状态
+    n_orphan = db.execute(
+        "UPDATE sources SET state='testing' WHERE state IS NULL OR state=''"
+    ).rowcount
 
-    if n_eligible == 0:
-        print(f"[{datetime.now(timezone.utc).isoformat(timespec='seconds')}] 周期恢复: 无符合条件的源")
-        db.close()
-        return 0
+    # 2. 修复 score 越界
+    n_oob_low = db.execute(
+        "UPDATE sources SET score=0 WHERE score < 0"
+    ).rowcount
+    n_oob_high = db.execute(
+        "UPDATE sources SET score=100 WHERE score > 100"
+    ).rowcount
 
-    # 应用 +5
-    cur = db.execute("""
-        UPDATE sources SET score = MIN(100, score + ?)
-        WHERE status='candidate'
-          AND consecutive_fails = 0
-          AND consecutive_low_quality = 0
-          AND low_score_total = 0
-          AND score < 100
-    """, (RECOVERY_AMOUNT,))
-    n_recovered = cur.rowcount
+    # 3. 兜底: testing 状态 score < 30 持续 → 强制进 recovering
+    # (避免 testing 池里的源永远拿不到测试机会)
+    n_force_rec = db.execute("""
+        UPDATE sources SET state='recovering'
+        WHERE state='testing' AND score < 30
+    """).rowcount
+
+    # 4. 状态分布快照
+    state_dist = db.execute(
+        "SELECT state, COUNT(*), AVG(score), MIN(score), MAX(score) FROM sources GROUP BY state"
+    ).fetchall()
+
     db.commit()
 
-    # 跑后快照
-    after = db.execute("""
-        SELECT AVG(score) FROM sources WHERE status='candidate'
-    """).fetchone()
-    avg_after = after[0]
+    ts = datetime.now(timezone.utc).isoformat(timespec='seconds')
+    print(f"[{ts}] 周期维护 v3.0:")
+    print(f"  孤立状态修复: {n_orphan}")
+    print(f"  score 越界修复: 低 {n_oob_low}, 高 {n_oob_high}")
+    print(f"  testing 转 recovering (score<30): {n_force_rec}")
+    print(f"  状态分布:")
+    for state, cnt, avg, mn, mx in state_dist:
+        avg = avg or 0
+        mn = mn or 0
+        mx = mx or 0
+        print(f"    {state or 'NULL':<12}: {cnt:>4} 个, 均分 {avg:>5.1f}, 范围 [{mn:>5.1f}, {mx:>5.1f}]")
 
-    print(f"[{datetime.now(timezone.utc).isoformat(timespec='seconds')}] 周期恢复 v2.3:")
-    print(f"  符合条件: {n_eligible}, 实际恢复: {n_recovered} (已满分 {n_eligible - n_recovered} 跳过)")
-    print(f"  candidate 池均分: {avg_before:.1f} → {avg_after:.1f}")
     db.close()
     return 0
 

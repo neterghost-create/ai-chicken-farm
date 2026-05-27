@@ -1,28 +1,36 @@
 #!/usr/bin/env python3
 """
-subs-check 智能源同步器 v2
+subs-check 智能源同步器 v3.0
 
 合并:
   - 抓 README + 评分 + 写 sub-urls.txt
   - sub-urls.txt → config.yaml + reload subs-check
   (不再依赖外部 shell 脚本)
 
-状态机 (3 态):
-  candidate (新加入或黑名单到期)
-    ├─ 连续 3 轮失败 → blacklisted (锁 30 天, 自动解封后回 candidate)
-    └─ 连续 30 轮通过 → whitelisted (优先选, 失败容忍度高)
-  whitelisted
-    └─ 连续 60 轮失败 → blacklisted (即便白名单也封)
-  blacklisted
-    └─ 30 天到期 → candidate (重置计数器)
+v3.0 状态机 (Hysteresis 三态):
+  testing (主测试态, 主动累加分数)
+    ├─ score 触 100 → decaying
+    ├─ score 触 0 → recovering
+    └─ 由 sync-lza6 (拉取信号 A) + convert-formats (节点均分信号 B) 累加
+  decaying (满分顶到位, 进入被动衰减)
+    └─ score 每轮 -1±0.3 (jitter), 触 50 → testing
+  recovering (触底, 进入被动恢复)
+    └─ score 每轮 +1±0.3, 触 50 → testing
+
+v3.0 评分规则 (信号 A 拉取):
+  fetch_ok    +3
+  fetch_empty -5  (拉取成功但 0 节点)
+  fetch_fail  -10 (HTTP 4xx/5xx)
+  fetch_timeout -8
+
+v3.0 选源策略 (80 源):
+  1. 用户白名单 (永久保留)
+  2. **未评分源 (total_checks=0) — 用户要求最高优先**
+  3. testing 状态 (公平轮训, total_checks ASC, score ASC)
+  4. recovering / decaying (按 score 排序补齐)
 
 抓取优化:
   - 用 ETag/If-None-Match 304 short-circuit, README 没变就只跑状态机扫描
-
-输出:
-  - sub-urls.txt (评分系统的 source-of-truth)
-  - config.yaml.sub-urls (subs-check 的实际输入)
-  - subs-check 重启 (只在源列表真变化时)
 """
 import os
 import re
@@ -45,16 +53,18 @@ SUBS_LOG_DIR = "/var/log"
 SUBS_LOG_GLOB = "subs-check*"
 
 MAX_SOURCES = 80                  # 最终选源数量上限
-FAIL_THRESHOLD_CANDIDATE = 3       # 候选池连续失败 N 轮 → 拉黑
-PASS_THRESHOLD_PROMOTE = 30        # 候选池连续通过 N 轮 → 升白
-FAIL_THRESHOLD_WHITELIST = 60      # 白名单连续失败 N 轮 → 拉黑
-BLACKLIST_DAYS = 30                # 黑名单到期时间
 FETCH_TIMEOUT = 15
 
-# v2.3 减分常量
-SOURCE_DEFAULT_SCORE = 100.0       # 默认满分起步
-SOURCE_FETCH_FAIL_PENALTY = 15     # 拉取失败 (HTTP 4xx/5xx/timeout)
-SOURCE_PARSE_EMPTY_PENALTY = 10    # 拉取成功但解析后 0 节点 (按 v2.3 设计区分, 此处沿用 fail_urls 整体处理)
+# v3.0 状态机常量 (Hysteresis 三态)
+SOURCE_DEFAULT_SCORE = 50.0        # 默认中点起步
+PASSIVE_RATE = 1.0                 # 被动 ±1 分
+PASSIVE_JITTER = 0.3               # ±0.3 抖动
+
+# 信号 A (拉取)
+SOURCE_FETCH_OK = 3
+SOURCE_FETCH_EMPTY = -5
+SOURCE_FETCH_FAIL = -10
+SOURCE_FETCH_TIMEOUT = -8
 
 DOMAIN_BLACKLIST = {'openproxylist.com', 'git.io'}
 KEYWORD_BLACKLIST = [
@@ -101,7 +111,8 @@ MIGRATIONS = [
     "ALTER TABLE sources ADD COLUMN status TEXT DEFAULT 'candidate'",
     "ALTER TABLE sources ADD COLUMN blocked_until TEXT",
     "ALTER TABLE sources ADD COLUMN consecutive_low_quality INTEGER DEFAULT 0",
-    "ALTER TABLE sources ADD COLUMN low_score_total INTEGER DEFAULT 0",   # v2.3
+    "ALTER TABLE sources ADD COLUMN low_score_total INTEGER DEFAULT 0",
+    "ALTER TABLE sources ADD COLUMN state TEXT DEFAULT 'testing'",   # v3.0
 ]
 
 
@@ -234,42 +245,22 @@ def parse_subs_check_failures():
 
 
 def apply_state_machine(db):
-    """
-    v2.3 状态机: 根据失败/通过结果更新 sources 表 (信号 A 网络可达性)
+    """v3.0 源三态机: Hysteresis 状态转换 + 信号 A 累加
 
     规则:
-      失败一次:  score -= 15 (SOURCE_FETCH_FAIL_PENALTY), consecutive_fails+1, consecutive_passes=0
-      通过一次:  score 不变, consecutive_passes+1, consecutive_fails=0  (满分起步无需累加)
-      candidate AND fails >= 3:  → blacklisted 30 天 (触发点 ①)
-      whitelisted AND fails >= 60:  → blacklisted 30 天 (触发点 ②)
-      candidate AND passes >= 30:  → whitelisted, 升白时清零所有计数器
-      黑名单到期: 完整复活 (score=100, fails=passes=lq=lst=0)
+      失败一次:  score -= 10 (SOURCE_FETCH_FAIL), consecutive_fails+1, consecutive_passes=0
+      通过一次:  score += 3 (SOURCE_FETCH_OK), consecutive_passes+1, consecutive_fails=0
+      触 100:    state='decaying', score=100
+      触 0:      state='recovering', score=0
+      decaying:  被动 -= 1±0.3, 触 50 → testing
+      recovering: 被动 += 1±0.3, 触 50 → testing
 
-    返回 (n_failed, n_passed, n_promoted, n_demoted, n_unblocked) 统计
+    返回 (n_failed, n_passed, n_to_decaying, n_to_recovering, n_dec_to_test, n_rec_to_test)
     """
-    fail_urls = parse_subs_check_failures()
+    import random
 
-    # === 黑名单到期完整复活 (v2.3: score 重置 100, low_score_total 清零) ===
+    fail_urls = parse_subs_check_failures()
     now = datetime.now(timezone.utc)
-    n_unblocked = 0
-    for row in db.execute("""
-        SELECT url FROM sources WHERE status='blacklisted' AND blocked_until IS NOT NULL
-    """).fetchall():
-        url = row[0]
-        bu = db.execute("SELECT blocked_until FROM sources WHERE url=?", (url,)).fetchone()[0]
-        if bu and datetime.fromisoformat(bu) <= now:
-            db.execute("""
-                UPDATE sources SET
-                    status='candidate',
-                    blocked_until=NULL,
-                    score=?,
-                    consecutive_fails=0,
-                    consecutive_passes=0,
-                    consecutive_low_quality=0,
-                    low_score_total=0
-                WHERE url=?
-            """, (SOURCE_DEFAULT_SCORE, url))
-            n_unblocked += 1
 
     # 取当前 sub-urls.txt 里的, 这些是 "应该被测过的"
     current = set()
@@ -277,43 +268,37 @@ def apply_state_machine(db):
         with open(TARGET_FILE) as f:
             current = {l.strip() for l in f if l.strip() and not l.startswith('#')}
 
-    n_failed = n_passed = n_promoted = n_demoted = 0
+    n_failed = n_passed = n_to_decaying = n_to_recovering = 0
 
-    # 对当前清单中每个源判定 fail/pass 然后状态机
+    # === 1. 信号 A: 仅 testing 状态源接受拉取信号累加 ===
     for url in current:
+        row = db.execute(
+            "SELECT state, score FROM sources WHERE url=?", (url,)
+        ).fetchone()
+        if not row:
+            continue
+        state, cur_score = row
+        state = state or 'testing'
+        cur_score = cur_score if cur_score is not None else SOURCE_DEFAULT_SCORE
+
         if url in fail_urls:
-            # === v2.3 失败: score -=15, consecutive_fails+1 ===
+            n_failed += 1
             db.execute("""
                 UPDATE sources SET
                     consecutive_fails = consecutive_fails + 1,
                     consecutive_passes = 0,
-                    total_checks = total_checks + 1,
-                    score = MAX(0, score - ?)
+                    total_checks = total_checks + 1
                 WHERE url=?
-            """, (SOURCE_FETCH_FAIL_PENALTY, url))
-            n_failed += 1
-            # 状态转移 (失败方向)
-            row = db.execute(
-                "SELECT status, consecutive_fails FROM sources WHERE url=?", (url,)
-            ).fetchone()
-            if row:
-                status, fails_n = row
-                if status == 'candidate' and fails_n >= FAIL_THRESHOLD_CANDIDATE:
-                    until = (now + timedelta(days=BLACKLIST_DAYS)).isoformat()
-                    db.execute("""
-                        UPDATE sources SET status='blacklisted', blocked_until=?
-                        WHERE url=?
-                    """, (until, url))
-                    n_demoted += 1
-                elif status == 'whitelisted' and fails_n >= FAIL_THRESHOLD_WHITELIST:
-                    until = (now + timedelta(days=BLACKLIST_DAYS)).isoformat()
-                    db.execute("""
-                        UPDATE sources SET status='blacklisted', blocked_until=?
-                        WHERE url=?
-                    """, (until, url))
-                    n_demoted += 1
+            """, (url,))
+            if state == 'testing':
+                new_score = max(0.0, cur_score + SOURCE_FETCH_FAIL)
+                if new_score <= 0:
+                    db.execute("UPDATE sources SET score=0, state='recovering' WHERE url=?", (url,))
+                    n_to_recovering += 1
+                else:
+                    db.execute("UPDATE sources SET score=? WHERE url=?", (new_score, url))
         else:
-            # === v2.3 通过: score 不变 (满分起步无需累加), 仅累加 consecutive_passes ===
+            n_passed += 1
             db.execute("""
                 UPDATE sources SET
                     consecutive_passes = consecutive_passes + 1,
@@ -322,27 +307,41 @@ def apply_state_machine(db):
                     total_passes = total_passes + 1
                 WHERE url=?
             """, (url,))
-            n_passed += 1
-            # 状态转移 (升白) - v2.3: 升白时清零所有计数器
-            row = db.execute(
-                "SELECT status, consecutive_passes FROM sources WHERE url=?", (url,)
-            ).fetchone()
-            if row:
-                status, passes_n = row
-                if status == 'candidate' and passes_n >= PASS_THRESHOLD_PROMOTE:
-                    db.execute("""
-                        UPDATE sources SET
-                            status='whitelisted',
-                            score=?,
-                            consecutive_fails=0,
-                            consecutive_low_quality=0,
-                            low_score_total=0
-                        WHERE url=?
-                    """, (SOURCE_DEFAULT_SCORE, url))
-                    n_promoted += 1
+            if state == 'testing':
+                new_score = min(100.0, cur_score + SOURCE_FETCH_OK)
+                if new_score >= 100:
+                    db.execute("UPDATE sources SET score=100, state='decaying' WHERE url=?", (url,))
+                    n_to_decaying += 1
+                else:
+                    db.execute("UPDATE sources SET score=? WHERE url=?", (new_score, url))
+
+    # === 2. Hysteresis 被动衰减/恢复 (decaying / recovering 两态) ===
+    rows = db.execute("""
+        SELECT url, state, score FROM sources WHERE state IN ('decaying', 'recovering')
+    """).fetchall()
+    n_dec_to_test = n_rec_to_test = 0
+    for url, state, score in rows:
+        score = score if score is not None else SOURCE_DEFAULT_SCORE
+        jitter = random.uniform(-PASSIVE_JITTER, PASSIVE_JITTER)
+        if state == 'decaying':
+            new_score = max(0.0, min(100.0, score - PASSIVE_RATE + jitter))
+            if new_score <= SOURCE_DEFAULT_SCORE:
+                db.execute("UPDATE sources SET state='testing', score=? WHERE url=?",
+                          (SOURCE_DEFAULT_SCORE, url))
+                n_dec_to_test += 1
+            else:
+                db.execute("UPDATE sources SET score=? WHERE url=?", (new_score, url))
+        else:  # recovering
+            new_score = max(0.0, min(100.0, score + PASSIVE_RATE + jitter))
+            if new_score >= SOURCE_DEFAULT_SCORE:
+                db.execute("UPDATE sources SET state='testing', score=? WHERE url=?",
+                          (SOURCE_DEFAULT_SCORE, url))
+                n_rec_to_test += 1
+            else:
+                db.execute("UPDATE sources SET score=? WHERE url=?", (new_score, url))
 
     db.commit()
-    return n_failed, n_passed, n_promoted, n_demoted, n_unblocked
+    return n_failed, n_passed, n_to_decaying, n_to_recovering, n_dec_to_test, n_rec_to_test
 
 
 # ============= 选源 =============
@@ -354,68 +353,75 @@ def load_user_whitelist():
 
 
 def select_sources(db, max_n=MAX_SOURCES):
-    """选源策略 v3 (v2.3 评分规则配套, 2026-05-26):
+    """v3.0 选源策略 (用户要求 80 源优先从未评分的源开始):
 
-    优先级 (黑名单永远跳过, 自动补齐到 max_n):
+    优先级 (自动补齐到 max_n):
       1. 用户白名单 (文件顺序, 永久保留)
-      2. status='whitelisted' 自动白
-         按 score DESC, consecutive_passes DESC, total_passes DESC
-      3. 探索预算: candidate 中 total_checks=0 的"未测过"源
-         按 first_seen ASC (先来先测), 这一层确保所有新源至少被轮训一次
-      4. 公平轮训 + 低分翻身 (v2.3 用户原话):
-         按 total_checks ASC (公平: 测得越少越优先)
-            score ASC          (同次数下低分先翻身)
-            consecutive_passes DESC (同分下长期稳定优先)
-            first_seen ASC
+      2. **未评分源 total_checks=0** (用户要求 — 最高自动优先)
+         按 first_seen ASC (先来先测), 让所有新源至少被轮训一次
+      3. testing 状态源 (主测试态, 公平轮训)
+         按 total_checks ASC, score ASC, consecutive_passes DESC, first_seen ASC
+      4. recovering 状态 (按 score DESC, 让正在恢复的源参与测试反馈)
+      5. decaying 状态 (按 score DESC, 满分顶到位的源, 测试少耗一点容错)
 
     设计目标:
-      - 每轮固定 max_n (80) 个源, 黑名单触发后从下一层自动补齐
-      - 全部源在约 12-18h (2-3 轮) 内被首次轮训
-      - 之后稳态: 测得最少+低分先 → 自然轮训, 高分老源不饿死 (consecutive_passes 兜底)
-      - 僵尸源由 v2.3 触发点 ④ (low_score_total >= 15) 兜底拉黑, 不靠排序冷处理
+      - 每轮固定 max_n (80) 个源
+      - 全部源在 2-3 轮内被首次轮训
+      - 之后稳态: testing 池主导, recovering 优先于 decaying (让低分源有机会回归)
+      - 没有黑名单, score 触底自动进 recovering 池循环
     """
     user_wl = load_user_whitelist()
     seen = set(user_wl)
     final = list(user_wl)
-    layer_stats = {'user_wl': len(user_wl), 'auto_wl': 0, 'unexplored': 0, 'tested': 0}
+    layer_stats = {'user_wl': len(user_wl), 'unexplored': 0,
+                   'testing': 0, 'recovering': 0, 'decaying': 0}
 
     def add_from(rows, layer_key):
         for row in rows:
             if len(final) >= max_n:
-                return True  # 满了
+                return True
             if row[0] not in seen:
                 final.append(row[0])
                 seen.add(row[0])
                 layer_stats[layer_key] += 1
         return False
 
-    # 2. 系统白名单
+    # 2. 未评分源 (用户要求最高优先)
     full = add_from(db.execute("""
         SELECT url FROM sources
-        WHERE status='whitelisted'
-        ORDER BY score DESC, consecutive_passes DESC, total_passes DESC
-    """).fetchall(), 'auto_wl')
-    if full:
-        return final, len(user_wl), layer_stats
-
-    # 3. 探索预算: 未测过的 candidate (公平轮训, first_seen ASC)
-    full = add_from(db.execute("""
-        SELECT url FROM sources
-        WHERE status='candidate' AND total_checks=0
+        WHERE total_checks = 0
         ORDER BY first_seen ASC, url ASC
     """).fetchall(), 'unexplored')
     if full:
         return final, len(user_wl), layer_stats
 
-    # 4. v2.3 公平轮训 + 低分翻身
-    add_from(db.execute("""
+    # 3. testing 状态 (主测试态, 公平轮训)
+    full = add_from(db.execute("""
         SELECT url FROM sources
-        WHERE status='candidate' AND total_checks>0
+        WHERE state = 'testing' AND total_checks > 0
         ORDER BY total_checks ASC,
                  score ASC,
                  consecutive_passes DESC,
                  first_seen ASC
-    """).fetchall(), 'tested')
+    """).fetchall(), 'testing')
+    if full:
+        return final, len(user_wl), layer_stats
+
+    # 4. recovering 状态 (优先于 decaying, 让低分源有机会回升)
+    full = add_from(db.execute("""
+        SELECT url FROM sources
+        WHERE state = 'recovering'
+        ORDER BY score DESC, total_checks ASC
+    """).fetchall(), 'recovering')
+    if full:
+        return final, len(user_wl), layer_stats
+
+    # 5. decaying 状态 (满分顶到位的源, 测试反馈最弱)
+    add_from(db.execute("""
+        SELECT url FROM sources
+        WHERE state = 'decaying'
+        ORDER BY score DESC, total_checks ASC
+    """).fetchall(), 'decaying')
 
     return final, len(user_wl), layer_stats
 
@@ -507,22 +513,24 @@ def main(dry_run=False):
     # 2. 状态机扫描 (dry-run 模式跳过, 避免污染 DB)
     if dry_run:
         print(f"  [dry-run] 跳过状态机扫描 (避免改 DB)")
-        n_f = n_p = n_pro = n_dem = n_unb = 0
     else:
-        n_f, n_p, n_pro, n_dem, n_unb = apply_state_machine(db)
-        print(f"  ✓ 状态机: 失败 {n_f}, 通过 {n_p}, 升白 {n_pro}, 降黑 {n_dem}, 解封 {n_unb}")
+        n_f, n_p, n_dec, n_rec, n_d2t, n_r2t = apply_state_machine(db)
+        print(f"  ✓ v3.0 源三态机: 失败 {n_f}, 通过 {n_p}, "
+              f"→decaying {n_dec}, →recovering {n_rec}, "
+              f"hysteresis dec→test {n_d2t}, rec→test {n_r2t}")
 
-    # 3. 选源 (用户白 + 自动白 + 候选)
+    # 3. 选源 (用户白 + 未评分 + testing + recovering + decaying)
     final, wl_n, layer_stats = select_sources(db, MAX_SOURCES)
     counts = db.execute(
-        "SELECT status, COUNT(*) FROM sources GROUP BY status"
+        "SELECT state, COUNT(*) FROM sources GROUP BY state"
     ).fetchall()
-    counts_str = ', '.join(f"{s}={c}" for s, c in counts)
-    print(f"  ✓ DB 统计: {counts_str}")
-    print(f"  ✓ 选源: {len(final)} 个 (用户白 {layer_stats['user_wl']}"
-          f" + 系统白 {layer_stats['auto_wl']}"
-          f" + 未测过 {layer_stats['unexplored']}"
-          f" + 已测兜底 {layer_stats['tested']})")
+    counts_str = ', '.join(f"{s or 'null'}={c}" for s, c in counts)
+    print(f"  ✓ DB 状态分布: {counts_str}")
+    print(f"  ✓ 选源 v3.0: {len(final)} 个 (用户白 {layer_stats['user_wl']}"
+          f" + 未评分 {layer_stats['unexplored']}"
+          f" + testing {layer_stats['testing']}"
+          f" + recovering {layer_stats['recovering']}"
+          f" + decaying {layer_stats['decaying']})")
 
     # 4. 写 sub-urls.txt
     if dry_run:
