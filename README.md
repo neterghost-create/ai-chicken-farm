@@ -5,6 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux-blue.svg)]()
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10+-green.svg)]()
+[![Release](https://img.shields.io/github/v/release/neterghost-create/ai-chicken-farm?label=release&color=orange)](https://github.com/neterghost-create/ai-chicken-farm/releases/latest)
+[![Last Commit](https://img.shields.io/github/last-commit/neterghost-create/ai-chicken-farm?color=informational)](https://github.com/neterghost-create/ai-chicken-farm/commits/main)
+[![Stars](https://img.shields.io/github/stars/neterghost-create/ai-chicken-farm?style=social)](https://github.com/neterghost-create/ai-chicken-farm/stargazers)
 
 ## 這是什麼
 
