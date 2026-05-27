@@ -1,0 +1,29 @@
+# Dependabot configuration
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # Track GitHub Actions versions in .github/workflows/
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      # Monthly cadence keeps the noise low for a hobby project.
+      # Dependabot does NOT support 'day' under monthly schedule — it
+      # picks the day automatically (typically the first business day).
+      interval: "monthly"
+      time: "09:00"
+      timezone: "Asia/Hong_Kong"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    # Group all minor + patch updates into a single PR per month
+    # to avoid PR spam. Major updates still get their own PR.
+    groups:
+      actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"

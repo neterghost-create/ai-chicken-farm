@@ -1,0 +1,67 @@
+# GitHub Pages — Jekyll site config
+# https://docs.github.com/en/pages/setting-up-a-github-pages-site-with-jekyll
+
+title: AI 養雞場 (AI Chicken Farm)
+description: >-
+  Self-hosted, low-footprint pipeline that auto-discovers, cleans, scores,
+  and serves public free proxy nodes on a single Linux VPS.
+
+# Cayman is GitHub's "supported" theme — works out of the box without
+# requiring a custom Gemfile. To switch themes later, see:
+# https://pages.github.com/themes/
+theme: jekyll-theme-cayman
+
+# Show on the rendered site header
+show_downloads: true
+
+# What to include in the rendered site
+# (default behaviour is fine: README.md becomes index, all *.md served)
+include:
+  - README.md
+  - README.en.md
+  - DEPLOYMENT.md
+  - CONTRIBUTING.md
+  - LICENSE
+
+# What NOT to ship to Pages
+exclude:
+  - snapshots/         # 1:1 restore artefacts — not useful for visitors
+  - .github/           # CI / templates
+  - .gitignore
+  - Gemfile
+  - Gemfile.lock
+  - vendor/
+
+# Don't generate per-file timestamps in URLs
+permalink: pretty
+
+# Code-block highlighting
+markdown: kramdown
+kramdown:
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: highlight
+    block:
+      line_numbers: false
+
+# Plugins available on github-pages safelist
+plugins:
+  - jekyll-relative-links
+  - jekyll-optional-front-matter
+  - jekyll-readme-index
+  - jekyll-default-layout
+  - jekyll-titles-from-headings
+
+# Make all .md files render even without front-matter
+relative_links:
+  enabled: true
+  collections: true
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+# 如果之後想用自定義域名 (例如 chickenfarm.example.com),
+# 把 CNAME 文件放倉庫根, 然後在 Settings → Pages → Custom domain 設置.
