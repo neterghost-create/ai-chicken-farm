@@ -1,0 +1,38 @@
+# 部署生成的數據庫 (任何人 fork 都不該帶你的數據)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# 備份標籤
+*.bak.*
+*.failed.*
+
+# 真實憑證 (用模板代替)
+free-pool.conf
+duckdns.conf
+telegram-bot.conf
+.env
+.env.*
+!.env.example
+
+# 日誌
+*.log
+/var/log/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 編輯器
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# 訂閱輸出 (token 子目錄絕對不要進倉)
+sub/free/*/
+
+# OS
+Thumbs.db

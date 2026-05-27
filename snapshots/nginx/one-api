@@ -1,0 +1,211 @@
+# One-API: example-legacy.duckdns.org → 127.0.0.1:3002 (Docker)
+# 注意:
+#   - One-API 後端會塞 CSP/Permissions-Policy，必須 proxy_hide_header 才能正常顯示
+#   - 不可加 nginx 自己的 CSP，否則 React 控制台會掛
+#   - 不可加 rate limit，LLM API 響應大、長連線
+
+# ===== HTTP → HTTPS =====
+server {
+    listen 80;
+    listen [::]:80;
+    server_name example-legacy.duckdns.org;
+
+    include /etc/nginx/snippets/acme-challenge.conf;
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ===== HTTPS =====
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name example-legacy.duckdns.org;
+
+    ssl_certificate /etc/letsencrypt/live/example-legacy.duckdns.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example-legacy.duckdns.org/privkey.pem;
+
+    include /etc/nginx/snippets/ssl-hardening.conf;
+    include /etc/nginx/snippets/security-common.conf;
+
+    # LLM API 的 response 可能很大
+    client_max_body_size 100M;
+    proxy_buffering off;
+    proxy_request_buffering off;
+
+    # ===== Shadowsocks Monitor 靜態頁 =====
+    location /ss-monitor/ {
+        alias /opt/ss-monitor/;
+        index index.html;
+        try_files $uri $uri/ =404;
+
+        # 不缓存: index.html 改了立即生效, sub/ 订阅文件 6h 一更也不应缓存
+        add_header Cache-Control "no-cache, must-revalidate" always;
+        expires off;
+
+        # 安全加固
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=()" always;
+        add_header Cross-Origin-Opener-Policy "same-origin" always;
+        add_header Cross-Origin-Resource-Policy "same-origin" always;
+        # 2026-05-27 安全加固 Phase A1: 补全 5 个安全头
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header X-XSS-Protection "0" always;
+    }
+
+    # ===== 訂閱檔(token-protected, 不允許目錄列舉)=====
+    # ===== Free Pool: 监控 JSON (公开, 不带订阅 URL) =====
+    # /sub/free/stats.json /sub/free/nodes.json /sub/free/diff.json /sub/free/history.json
+    location ~ "^/sub/free/(stats|nodes|diff|history)\.json$" {
+        alias /opt/ss-monitor/sub/free/$1.json;
+        add_header Cache-Control "public, max-age=60";
+        default_type application/json;
+    }
+
+    # ===== Free Pool: 订阅文件 (token 必须正确) =====
+    # /sub/free/<32位hex>/<all|all-config|v2ray|base64>.<yaml|txt>
+    location ~ "^/sub/free/([a-f0-9]{32})/(all|all-config|v2ray|base64)\.(yaml|txt)$" {
+        alias /opt/ss-monitor/sub/free/$1/$2.$3;
+        add_header Cache-Control "public, max-age=300";
+        types {
+            text/plain txt;
+            application/x-yaml yaml;
+        }
+        default_type text/plain;
+    }
+
+    # ===== Free Pool: 任何其他 /sub/free/* 请求一律 403 (防止走 alias 撞到老文件) =====
+    location ~ "^/sub/free/" {
+        return 403;
+    }
+
+    # ===== 原 SS Monitor 订阅 (token-based) =====
+    location /sub/ {
+        alias /opt/ss-monitor/sub/;
+        autoindex off;
+        add_header Cache-Control "public, max-age=3600";
+        types {
+            text/plain txt;
+            application/x-yaml yaml;
+        }
+        default_type text/plain;
+        location = /sub/ {
+            return 404;
+        }
+    }
+
+    # ===== VPS 服务器状态 API =====
+    location /api/vps-status {
+        limit_except GET HEAD { deny all; }
+        limit_req zone=ss_api burst=12 nodelay;
+        proxy_pass http://127.0.0.1:5000/api/vps-status;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        add_header Cache-Control "private, max-age=5" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Cross-Origin-Resource-Policy "same-origin" always;
+    }
+
+    # ===== Shadowsocks status API =====
+    location /api/ss-status {
+        limit_except GET HEAD { deny all; }
+        limit_req zone=ss_api burst=12 nodelay;
+        proxy_pass http://127.0.0.1:5000/api/ss-status;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        add_header Cache-Control "private, max-age=5" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Cross-Origin-Resource-Policy "same-origin" always;
+    }
+
+    # ===== Subs-Check Free Pool API =====
+    location /api/free-pool {
+        limit_except GET HEAD { deny all; }
+        limit_req zone=ss_api burst=12 nodelay;
+        proxy_pass http://127.0.0.1:5000/api/free-pool;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        add_header Cache-Control "private, max-age=5" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Cross-Origin-Resource-Policy "same-origin" always;
+    }
+
+    # ===== Subs-Check Free Pool: 节点表 / diff / 趋势 =====
+    location /api/free-pool/ {
+        limit_except GET HEAD { deny all; }
+        limit_req zone=ss_api burst=12 nodelay;
+        proxy_pass http://127.0.0.1:5000/api/free-pool/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        add_header Cache-Control "private, max-age=10" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Cross-Origin-Resource-Policy "same-origin" always;
+    }
+
+    # ===== One-API 控制台 =====
+    location / {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # One-API 後端 CSP/Permissions-Policy 會把控制台搞掛，必須拿掉
+        proxy_hide_header Content-Security-Policy;
+        proxy_hide_header Permissions-Policy;
+
+        # LLM 響應可能 stream 很久
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_connect_timeout 60s;
+    }
+
+    location /static/ {
+        proxy_pass http://127.0.0.1:3002/static/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        expires 1d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # ===== One-API 內部 /api/ =====
+    location /api/ {
+        proxy_pass http://127.0.0.1:3002/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+    }
+
+    # ===== OpenAI-compatible /v1/ =====
+    location /v1/ {
+        proxy_pass http://127.0.0.1:3002/v1/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # SSE / streaming 必須關掉緩衝
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+    }
+}

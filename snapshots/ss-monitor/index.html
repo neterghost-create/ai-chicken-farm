@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>AI養雞場 · 24h 直播</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🐔%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="app.css?v=20260527_1142">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="brand">
+                <div class="brand-mark">🐔</div>
+                <div>
+                    <h1>AI養雞場</h1>
+                    <div class="sub" data-i18n="header.subtitle">養殖數據 · 24h 直播</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="lang-switch" id="langSwitch" role="group" aria-label="Language">
+                    <button data-lang="zh-Hant" type="button" title="繁體中文">繁</button>
+                    <button data-lang="zh-Hans" type="button" title="简体中文">簡</button>
+                    <button data-lang="en"      type="button" title="English">EN</button>
+                </div>
+                <span class="badge cyan live"><span class="dot"></span><span data-i18n="header.live">咯咯</span></span>
+                <span class="badge neutral" id="globalTimestamp" style="font-family: var(--font-mono);">-</span>
+            </div>
+        </div>
+
+        <!-- Hero 全局看板 -->
+        <div class="hero" id="heroGrid">
+            <div class="hero-tile" id="heroSS">
+                <div class="label">🐓 <span data-i18n="hero.ss">雞霸王</span></div>
+                <div class="value" id="heroSSStatus">—</div>
+                <div class="hint" id="heroSSConn" data-i18n="hero.checking">檢測中...</div>
+            </div>
+            <div class="hero-tile" id="heroVPS">
+                <div class="label">🏠 <span data-i18n="hero.vps">雞舍</span></div>
+                <div class="value" id="heroVPSCpu">—</div>
+                <div class="hint" id="heroVPSMem">—</div>
+            </div>
+            <div class="hero-tile" id="heroPool">
+                <div class="label">🥚 <span data-i18n="hero.pool">蛋池</span></div>
+                <div class="value" id="heroPoolNodes">—</div>
+                <div class="hint" id="heroPoolProg">—</div>
+            </div>
+            <div class="hero-tile" id="heroSrc">
+                <div class="label">🌾 <span data-i18n="hero.feed">飼料源</span></div>
+                <div class="value" id="heroSrcCount">—</div>
+                <div class="hint" id="heroSrcMaturity">—</div>
+            </div>
+        </div>
+
+        <!-- VPS 服務器狀態 -->
+        <div class="card collapsible" id="vpsCard">
+            <div class="card-head">
+                <div class="card-title cyan"><div class="ico">🏠</div><span data-i18n="vps.title">雞舍狀態</span></div>
+                <div class="card-meta" id="vpsHostInfo">—</div>
+            <span class="collapse-arrow" aria-hidden="true">▾</span>
+            </div>
+            <div class="card-body">
+
+            <div class="kv-grid" style="margin-bottom:18px;">
+                <div class="kv-row"><span class="k">主機名</span><span class="v" id="vpsHostname">—</span></div>
+                <div class="kv-row"><span class="k">操作系統</span><span class="v" id="vpsOS">—</span></div>
+                <div class="kv-row"><span class="k">內核 / 架構</span><span class="v" id="vpsKernel">—</span></div>
+                <div class="kv-row"><span class="k">CPU 型號</span><span class="v" id="vpsCpuModel">—</span></div>
+                <div class="kv-row"><span class="k">運行時長</span><span class="v" id="vpsUptime">—</span></div>
+                <div class="kv-row"><span class="k">進程數</span><span class="v" id="vpsProc">—</span></div>
+            </div>
+
+            <div class="section-title">資源使用</div>
+            <div class="stat-grid" id="vpsResources">
+                <div class="stat-tile">
+                    <div class="label">CPU</div>
+                    <div class="value" id="vpsCpuValue">—</div>
+                    <div class="progress-wrap" style="margin-top:8px;"><div class="progress-bar" id="vpsCpuBar" style="width:0%"></div></div>
+                    <div style="font-size:11px; color:var(--text-3); margin-top:4px;" id="vpsCpuCores">—</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="label">內存</div>
+                    <div class="value" id="vpsMemValue">—</div>
+                    <div class="progress-wrap" style="margin-top:8px;"><div class="progress-bar" id="vpsMemBar" style="width:0%"></div></div>
+                </div>
+                <div class="stat-tile">
+                    <div class="label">磁盤 /</div>
+                    <div class="value" id="vpsDiskValue">—</div>
+                    <div class="progress-wrap" style="margin-top:8px;"><div class="progress-bar" id="vpsDiskBar" style="width:0%"></div></div>
+                </div>
+                <div class="stat-tile">
+                    <div class="label">Swap</div>
+                    <div class="value" id="vpsSwapValue">—</div>
+                    <div class="progress-wrap" style="margin-top:8px;"><div class="progress-bar" id="vpsSwapBar" style="width:0%"></div></div>
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top:18px;">系統負載 (1m / 5m / 15m, per-core)</div>
+            <div class="stat-grid">
+                <div class="stat-tile"><div class="label">Load 1m</div><div class="value" id="vpsLoad1">—</div></div>
+                <div class="stat-tile"><div class="label">Load 5m</div><div class="value" id="vpsLoad5">—</div></div>
+                <div class="stat-tile"><div class="label">Load 15m</div><div class="value" id="vpsLoad15">—</div></div>
+            </div>
+
+            <div class="section-title" style="margin-top:18px;">網絡 (<code id="vpsIface" style="font-family: var(--font-mono); color:var(--text-2);">—</code>)</div>
+            <div class="stat-grid">
+                <div class="stat-tile"><div class="label">↓ 實時</div><div class="value" id="vpsRxRate">—</div></div>
+                <div class="stat-tile"><div class="label">↑ 實時</div><div class="value" id="vpsTxRate">—</div></div>
+                <div class="stat-tile"><div class="label">總流量 ↓</div><div class="value" id="vpsRxTotal" style="font-size:18px;">—</div></div>
+                <div class="stat-tile"><div class="label">總流量 ↑</div><div class="value" id="vpsTxTotal" style="font-size:18px;">—</div></div>
+            </div>
+        
+            </div>
+        </div>
+
+        <!-- 免費節點池 -->
+        <div class="card collapsible" id="poolCard">
+            <div class="card-head">
+                <div class="card-title violet"><div class="ico">🥚</div><span data-i18n="pool.title">蛋池</span></div>
+                <div class="card-meta" id="poolNextCheckMeta">下次檢查 <code id="poolNextCheck" style="color:var(--text-2);">—</code></div>
+            <span class="collapse-arrow" aria-hidden="true">▾</span>
+            </div>
+            <div class="card-body">
+
+            <div class="kv-grid">
+                <div class="kv-row"><span class="k">服務狀態</span><span class="v"><span class="badge ok" id="poolServiceStatus"><span class="dot"></span>—</span></span></div>
+                <div class="kv-row"><span class="k">運行時長</span><span class="v" id="poolUptime">—</span></div>
+                <div class="kv-row"><span class="k">記憶體佔用</span><span class="v" id="poolMemory">—</span></div>
+            </div>
+
+            <div class="section-title">📊 當前一輪進度</div>
+            <div class="stat-grid">
+                <div class="stat-tile"><div class="label">測活</div><div class="value" id="poolTested" style="font-size:16px;">—</div></div>
+                <div class="stat-tile"><div class="label">存活</div><div class="value" id="poolAlive" style="color:var(--good);">—</div></div>
+                <div class="stat-tile"><div class="label">媒體通過</div><div class="value" id="poolMediaPass" style="color:var(--cyan-400);">—</div></div>
+                <div class="stat-tile"><div class="label">測速 ≥512KB/s</div><div class="value" id="poolSpeedPass" style="color:var(--good);">—</div></div>
+            </div>
+
+            <div class="section-title">🌐 節點池統計 (上一輪)</div>
+            <div class="stat-grid">
+                <div class="stat-tile"><div class="label">可用節點</div><div class="value" id="poolTotalNodes" style="color:var(--good);">—</div></div>
+                <div class="stat-tile" style="grid-column: span 2;"><div class="label">協議分佈</div><div class="chips" id="poolProtocols" style="margin-top:8px;"><span class="loading" style="padding:0;">加載中...</span></div></div>
+                <div class="stat-tile"><div class="label">上輪跑完</div><div class="value" id="poolLastRun" style="font-size:13px;">—</div></div>
+            </div>
+
+            <div class="section-title">📚 訂閱源評分庫</div>
+            <div class="kv-grid">
+                <div class="kv-row"><span class="k">已知源總數</span><span class="v" id="dbTotalSources">—</span></div>
+                <div class="kv-row"><span class="k">狀態分佈</span><span class="v" id="dbStatusCounts">—</span></div>
+                <div class="kv-row"><span class="k">上次同步</span><span class="v" id="dbLastSync">—</span></div>
+            </div>
+
+            <div style="margin-top:14px;">
+                <div style="font-size:12px; color:var(--text-2); margin-bottom:8px;">🌟 TOP 5 候選源 (按評分庫通過率)</div>
+                <div class="src-list" id="dbTopSources"><div class="loading">加載中...</div></div>
+                <div style="font-size:12px; color:var(--text-2); margin:14px 0 8px;">⛔ 黑名單源 (按解封時間)</div>
+                <div class="src-list" id="dbBlacklisted"><div class="loading">加載中...</div></div>
+            </div>
+
+            <div class="section-title">📈 輪次趨勢 (最近 20 輪)</div>
+            <div class="history-list" id="historyList"><div class="loading">加載中...</div></div>
+
+            <div class="section-title">🔄 上輪 vs 這輪 Diff</div>
+            <div class="diff-grid">
+                <div class="diff-tile"><div class="label">+ 新增</div><div class="value" id="diffAdded" style="color:var(--good);">—</div></div>
+                <div class="diff-tile"><div class="label">- 消失</div><div class="value" id="diffRemoved" style="color:var(--err);">—</div></div>
+                <div class="diff-tile"><div class="label">= 穩定</div><div class="value" id="diffKept">—</div></div>
+            </div>
+
+            <div class="section-title">📋 當前輪節點表</div>
+            <div class="toolbar">
+                <input type="text" id="nodeFilter" placeholder="搜尋 (名稱/地區/協議)..." data-i18n-placeholder="pool.search.placeholder">
+                <select id="nodeSort">
+                    <option value="quality_desc" data-i18n="pool.sort.qualityDesc">質量 ↓</option>
+                    <option value="speed_desc" data-i18n="pool.sort.speedDesc">測速 ↓</option>
+                    <option value="speed_asc" data-i18n="pool.sort.speedAsc">測速 ↑</option>
+                    <option value="appearances" data-i18n="pool.sort.appearances">出現率 ↓</option>
+                    <option value="region" data-i18n="pool.sort.region">地區</option>
+                    <option value="type" data-i18n="pool.sort.type">協議</option>
+                </select>
+                <span class="meta" id="nodeCount">—</span>
+            </div>
+            <div class="table-wrap"><div class="table-scroll">
+                <table class="data" id="nodeTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="node.col.name">名稱</th>
+                            <th data-i18n="node.col.quality" title="0-100分 · v2.3: 100 分起步 + 信號 ABC (探活/輪次/測速) 單向減分">質量</th>
+                            <th data-i18n="node.col.protocol">協議</th>
+                            <th class="col-hide-sm" data-i18n="node.col.region">地區</th>
+                            <th data-i18n="node.col.speed">測速</th>
+                            <th data-i18n="node.col.round" class="col-hide-sm" title="這隻雞到場幾輪 · 出現的輪次數">輪</th>
+                            <th data-i18n="node.col.streak" class="col-hide-sm" title="連續出現輪次">連</th>
+                            <th class="col-hide-sm">TLS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="nodeTableBody"></tbody>
+                </table>
+            </div></div>
+        
+            </div>
+        </div>
+
+        <!-- 自動發現 · discover-airports -->
+        <div class="card collapsible" id="discoverCard">
+            <div class="card-head">
+                <div class="card-title rose"><div class="ico">🐛</div><span data-i18n="discover.title">覓食</span></div>
+                <div class="card-meta" id="discoverMeta">最近一次掃描 <code id="discoverLastRun" style="color:var(--text-2);">—</code></div>
+                <span class="collapse-arrow" aria-hidden="true">▾</span>
+            </div>
+            <div class="card-body">
+
+            <div class="kv-grid" style="margin-bottom:14px;">
+                <div class="kv-row"><span class="k" data-i18n="discover.rulesVer">規則版本</span><span class="v" id="discoverRulesVer">—</span></div>
+                <div class="kv-row"><span class="k" data-i18n="discover.totalStates">發現源總數</span><span class="v" id="discoverTotalStates">—</span></div>
+                <div class="kv-row"><span class="k" data-i18n="discover.added7d">7天新增源</span><span class="v" id="discoverAdded7d">—</span></div>
+                <div class="kv-row"><span class="k" data-i18n="discover.auditCount">30天審計事件</span><span class="v" id="discoverAuditCount">—</span></div>
+            </div>
+
+            <div class="section-title" data-i18n="discover.section.queue">📊 隊列掃描狀態</div>
+            <div class="stat-grid" id="discoverKindGrid">
+                <div class="stat-tile"><div class="label" data-i18n="discover.kind.awesome">awesome README</div><div class="value" id="discoverKindAwesome" style="font-size:16px;">—</div><div style="font-size:11px; color:var(--text-3); margin-top:4px;" id="discoverKindAwesomeHint">—</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="discover.kind.topic">GitHub topics</div><div class="value" id="discoverKindTopic" style="font-size:16px;">—</div><div style="font-size:11px; color:var(--text-3); margin-top:4px;" id="discoverKindTopicHint">—</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="discover.kind.telegram">Telegram 頻道</div><div class="value" id="discoverKindTg" style="font-size:16px; color:var(--text-3);">—</div><div style="font-size:11px; color:var(--text-3); margin-top:4px;">未啟用</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="discover.kind.audit">現有源審計</div><div class="value" id="discoverKindAudit" style="font-size:16px;">—</div><div style="font-size:11px; color:var(--text-3); margin-top:4px;" id="discoverKindAuditHint">score &lt; 80 才掃</div></div>
+            </div>
+
+            <div class="section-title" data-i18n="discover.section.recentAdded">🌱 最近 7 天新增源</div>
+            <div class="src-list" id="discoverRecentAdded"><div class="loading">加載中...</div></div>
+
+            <div class="section-title" data-i18n="discover.section.audit">🛡️ 審計事件 (最近 20 條)</div>
+            <div class="src-list" id="discoverAuditList"><div class="loading">加載中...</div></div>
+
+            <div class="section-title" data-i18n="discover.section.queueDetail">📋 發現隊列詳情</div>
+            <div class="table-wrap"><div class="table-scroll">
+                <table class="data" id="discoverQueueTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="discover.col.kind">類型</th>
+                            <th data-i18n="discover.col.key">標識</th>
+                            <th data-i18n="discover.col.priority" data-i18n-title="discover.col.priority.title" title="優先級越小越早掃">優先級</th>
+                            <th data-i18n="discover.col.lastScan">上次掃描</th>
+                            <th data-i18n="discover.col.status">狀態</th>
+                            <th data-i18n="discover.col.totalAdded" data-i18n-title="discover.col.totalAdded.title" title="累計透過 6 層過濾入庫的源數">累計入庫</th>
+                        </tr>
+                    </thead>
+                    <tbody id="discoverQueueBody"></tbody>
+                </table>
+            </div></div>
+
+            <div style="font-size:11px; color:var(--text-3); margin-top:14px; line-height:1.6;">
+                💡 每天 02:00 自動執行 · awesome 5/天 + topic 2/天 + audit 10/天 ·
+                嚴格不動 sources.score/status/note · 6 層過濾 (域名白名單 / IOC / 路徑 / HTTP / 內容簽名 / 重複)
+            </div>
+
+            </div>
+        </div>
+
+        <!-- 節點級評分系統 -->
+        <div class="card collapsible" id="qualityCard">
+            <div class="card-head">
+                <div class="card-title green"><div class="ico">🌽</div><span data-i18n="quality.title">飼料</span></div>
+                <div class="card-meta">
+                  <span style="color:var(--good); font-weight:600;">v2.3 飼養規則</span> ·
+                  默認 score=100 單向減分 ·
+                  探活/未出現/慢速 → 扣分 ·
+                  連續 4 次探活/測速失敗 → ① 隔離 48h ·
+                  連續 5 輪 score &lt; 30 → ② 隔離 48h ·
+                  到期重返雞舍
+                </div>
+            <span class="collapse-arrow" aria-hidden="true">▾</span>
+            </div>
+            <div class="card-body">
+
+            <div class="stat-grid">
+                <div class="stat-tile"><div class="label">歷史已知節點</div><div class="value" id="qTotal">—</div></div>
+                <div class="stat-tile"><div class="label">活躍節點</div><div class="value" id="qActive" style="color:var(--good);">—</div></div>
+                <div class="stat-tile"><div class="label">黑名單 48h</div><div class="value" id="qBlacklisted" style="color:var(--err);">—</div></div>
+            </div>
+
+            <div class="section-title">📊 評分分佈</div>
+            <div id="qBands"><div class="loading">加載中...</div></div>
+
+            <div class="section-title">🥇 TOP 30 極品節點</div>
+            <div class="table-wrap"><div class="table-scroll" style="max-height:420px;">
+                <table class="data" id="qTopTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="node.col.name">名稱</th>
+                            <th data-i18n="node.col.quality">質量</th>
+                            <th data-i18n="node.col.protocol">協議</th>
+                            <th class="col-hide-sm" data-i18n="node.col.region">地區</th>
+                            <th data-i18n="node.col.avgSpeed">均速</th>
+                            <th data-i18n="node.col.latest" class="col-hide-sm">最新</th>
+                            <th data-i18n="node.col.round" class="col-hide-sm">輪</th>
+                            <th data-i18n="node.col.streak" class="col-hide-sm">連</th>
+                            <th data-i18n="node.col.probe" class="col-hide-sm" title="增量探活: 通過/總 · 這隻雞還活着嗎">探活</th>
+                        </tr>
+                    </thead>
+                    <tbody id="qTopBody"></tbody>
+                </table>
+            </div></div>
+
+            <div class="section-title">⛔ 黑名單 (節點級, 自動 48h 解封)</div>
+            <div id="qBlacklistList"><div class="loading">加載中...</div></div>
+        
+            </div>
+        </div>
+
+        <!-- 源級評分系統 -->
+        <div class="card collapsible" id="srcCard">
+            <div class="card-head">
+                <div class="card-title amber"><div class="ico">🏭</div><span data-i18n="src.title">飼料廠</span></div>
+                <div class="card-meta">
+                  <span style="color:var(--good); font-weight:600;">v2.3 飼養規則</span> ·
+                  默認 score=100, 單向減分 ·
+                  <code id="srcKillThreshold">5</code> 輪節點均分 &lt; <code id="srcLowCutoff">50</code> → ③ 拉黑 ·
+                  累計 <code id="srcKillTotal">15</code> 輪 score &lt; <code id="srcLowScoreCutoff">30</code> → ④ 拉黑 ·
+                  連續 <code id="srcFailThreshold">3</code> 次拉取失敗 → ① 拉黑 ·
+                  黑名單 30 天到期重返雞舍
+                </div>
+            <span class="collapse-arrow" aria-hidden="true">▾</span>
+            </div>
+            <div class="card-body">
+
+            <div class="stat-grid" style="margin-bottom:14px;">
+                <div class="stat-tile">
+                    <div class="label" style="display:flex; align-items:center;"><span class="maturity-dot scored"></span>已評分</div>
+                    <div class="value" id="srcMatScored" style="color:var(--good);">—</div>
+                    <div style="font-size:11px; color:var(--text-3); margin-top:4px;">當前輪真實貢獻節點</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="label" style="display:flex; align-items:center;"><span class="maturity-dot mapped"></span>已映射</div>
+                    <div class="value" id="srcMatMapped" style="color:var(--warn);">—</div>
+                    <div style="font-size:11px; color:var(--text-3); margin-top:4px;">fetcher 抓過, 當輪無節點</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="label" style="display:flex; align-items:center;"><span class="maturity-dot known"></span>待抓取</div>
+                    <div class="value" id="srcMatKnown" style="color:var(--text-2);">—</div>
+                    <div style="font-size:11px; color:var(--text-3); margin-top:4px;">已知但 fetcher 未抓</div>
+                </div>
+            </div>
+
+            <div class="section-title">📋 源級評分明細</div>
+            <div class="toolbar">
+                <input type="text" id="srcFilter" placeholder="搜尋源 URL..." data-i18n-placeholder="src.search.placeholder">
+                <select id="srcSort">
+                    <option value="score_desc" data-i18n="src.sort.scoreDesc">均分 ↓</option>
+                    <option value="score_asc" data-i18n="src.sort.scoreAsc">均分 ↑</option>
+                    <option value="count_desc" data-i18n="src.sort.countDesc">節點數 ↓</option>
+                    <option value="streak_desc">low streak ↓</option>
+                    <option value="maturity" data-i18n="src.sort.maturity">成熟度 ↓</option>
+                </select>
+                <select id="srcMaturityFilter">
+                    <option value="" data-i18n="src.maturity.all">全部成熟度</option>
+                    <option value="scored" data-i18n="src.maturity.scored">僅已評分</option>
+                    <option value="mapped" data-i18n="src.maturity.mapped">僅已映射</option>
+                    <option value="known" data-i18n="src.maturity.known">僅待抓取</option>
+                </select>
+                <span class="meta" id="srcCount">—</span>
+            </div>
+            <div class="table-wrap"><div class="table-scroll">
+                <table class="data" id="srcTable">
+                    <thead>
+                        <tr>
+                            <th data-i18n="src.col.url">源 URL</th>
+                            <th data-i18n="src.col.avgScore" title="該飼料源貢獻節點最新一輪的平均質量分">均分</th>
+                            <th data-i18n="src.col.nodeCount" class="col-hide-sm" title="該飼料源貢獻的節點數">節點</th>
+                            <th data-i18n="src.col.lowStreak" class="col-hide-sm" title="連續被嫌棄幾輪 · 連續低分輪次, 滿 5 → 拉黑">低分</th>
+                            <th data-i18n="src.col.maturity">成熟度</th>
+                            <th data-i18n="src.col.status" class="col-hide-sm">狀態</th>
+                            <th data-i18n="src.col.trend" class="col-hide-sm" title="最近 10 輪均分 sparkline">趨勢</th>
+                        </tr>
+                    </thead>
+                    <tbody id="srcTableBody"></tbody>
+                </table>
+            </div></div>
+        
+            </div>
+        </div>
+
+        <!-- SS 機場監控 -->
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title"><div class="ico">🐔</div>雞霸王</div>
+                <div class="card-meta">主出口 / 業務流量入口</div>
+            </div>
+
+            <div class="kv-grid">
+                <div class="kv-row"><span class="k">服務器</span><span class="v"><span class="masked" data-secret="example-root.duckdns.org" data-mask-mode="domain" title="點擊查看/隱藏">net***org</span></span></div>
+                <div class="kv-row"><span class="k">端口</span><span class="v"><span class="masked" data-secret="2052" data-mask-mode="port" title="點擊查看/隱藏">2***</span></span></div>
+                <div class="kv-row"><span class="k">加密方式</span><span class="v"><span class="masked" data-secret="chacha20-ietf-poly1305" data-mask-mode="generic" title="點擊查看/隱藏">cha***305</span></span></div>
+                <div class="kv-row"><span class="k">服務狀態</span><span class="v"><span class="badge ok" id="serviceStatus"><span class="dot"></span>檢測中</span></span></div>
+            </div>
+
+            <div class="section-title" style="margin-top:18px;">連接統計</div>
+            <div class="stat-grid">
+                <div class="stat-tile"><div class="label">活躍連接</div><div class="value" id="activeConnections">—</div></div>
+                <div class="stat-tile"><div class="label">總連接數</div><div class="value" id="totalConnections">—</div></div>
+                <div class="stat-tile"><div class="label">運行時間</div><div class="value" id="uptime" style="font-size:18px;">—</div></div>
+                <div class="stat-tile"><div class="label">記憶體佔用</div><div class="value" id="memory" style="font-size:18px;">—</div></div>
+            </div>
+
+            <div class="section-title" style="margin-top:18px;">🔗 當前連接</div>
+            <div class="table-wrap" style="padding: 12px;" id="connectionListWrap">
+                <div id="connectionList"><div class="loading">加載中...</div></div>
+            </div>
+        </div>
+
+        <!-- 訂閱鏈接 -->
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title"><div class="ico">📨</div>咕咕暗號</div>
+                <div class="card-meta">暗號鑑權</div>
+            </div>
+            <div style="font-size:13px; color:var(--text-2); line-height:1.7;">
+                進雞場要對暗號 — 訂閱鏈接需要 token 鑑權訪問。<br>
+                <span style="font-size:12px; color:var(--text-3);">暗號通過 Telegram 私聊推送給你，每次輪次更新會附最新 URL。請妥善保管，勿外傳。</span>
+            </div>
+        </div>
+    </div>
+
+    <button class="refresh-btn" id="refreshBtn" data-i18n-title="common.refresh" title="重新餵食 · 刷新所有數據">↻</button>
+
+    <script src="app.js?v=20260527_1142" defer></script>
+</body>
+</html>

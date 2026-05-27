@@ -1,0 +1,70 @@
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+TZ=Asia/Shanghai
+
+# ════════════════════════════════════════════════════════════════
+# 夜间维护时段 00:00-05:00 (静音, 不发通知)
+# ════════════════════════════════════════════════════════════════
+# OpenClaw 自动更新 (含預檢、冒煙測試、自動回滾)
+0 0 * * * /usr/local/bin/openclaw-auto-update.sh 2>> /var/log/openclaw-auto-update.log
+
+# Hermes Agent + Web UI 自动更新 - 凌晨 01:00 安静执行 (写 pending 文件)
+0 1 * * * /root/scripts/auto-update-hermes.sh --mode=update >> /var/log/hermes-auto-update.log 2>&1
+
+# OpenClaw 条件重启 (防内存泄漏) - 04:30 让出 apt-upgrade 窗口 (apt 04:00 启动, 通常 < 5min)
+30 4 * * * /usr/local/bin/openclaw-conditional-restart.sh >> /var/log/openclaw-restart.log 2>&1
+
+# SSL 證書: 續期由 certbot.timer 處理 (每日 10:40), 監控 04:35 跑健康檢查
+35 4 * * * /usr/local/bin/ssl-monitor.sh --report >> /var/log/ssl-monitor.log 2>&1
+
+# ════════════════════════════════════════════════════════════════
+# 早晨通知时段 09:00-09:30 (集中推送, 错开避免 telegram 限速)
+# ════════════════════════════════════════════════════════════════
+# Hermes 自动更新通知 (读 pending, 推送 Telegram + 微信)
+0 9 * * * /root/scripts/auto-update-hermes.sh --mode=notify >> /var/log/hermes-auto-update.log 2>&1
+
+# xreach (X/Twitter) ct0 cookie 有效性 - 周一 09:30
+30 9 * * 1 /usr/local/bin/xreach-token-monitor.sh >/dev/null 2>&1
+
+# ════════════════════════════════════════════════════════════════
+# 白天监控 (bobdong 集中 4 次/天, 错峰避开 :00 :30 高峰)
+# ════════════════════════════════════════════════════════════════
+# bobdong 优惠/预算/24h 速率监控 - 09:01 + 13:01 + 17:01 + 21:01 (统一 :01 错峰避开 :00 的 notify-telegram)
+1 9,13,17,21 * * * /usr/local/bin/bobdong-pricing-monitor.py >> /var/log/bobdong-pricing-monitor.log 2>&1
+
+# ════════════════════════════════════════════════════════════════
+# 持续巡检
+# ════════════════════════════════════════════════════════════════
+# OpenClaw 公網可達性 (連續失敗 2 次=60 分鐘才告警, 自動重啟修復)
+*/30 * * * * /usr/local/bin/openclaw-uptime-monitor.sh >/dev/null 2>&1
+# aicf 公網可達性 (連續失敗 2 次=60 分鐘才告警, 不自動修復, nginx 整體掛了由 openclaw 那條覆蓋)
+*/30 * * * * /usr/local/bin/aicf-uptime-monitor.sh >/dev/null 2>&1
+# DuckDNS IP 自動推送 (4 域名一起, 每 5 分鐘, 防止 CGNAT 飄移)
+*/5 * * * * /opt/duckdns/duck.sh >/dev/null 2>&1
+
+# Hermes 服务健康检查 (整点+30 min)
+30 * * * * /usr/local/bin/hermes-monitor.sh >> /var/log/hermes-monitor.log 2>&1
+# Memory 自动压缩 - 每天 09:15 分析(写提案+TG), 11:00 应用静默期已过的提案
+15 9 * * * /usr/local/bin/memory-compactor analyze >> /var/log/memory-compactor.log 2>&1
+0 11 * * * /usr/local/bin/memory-compactor apply >> /var/log/memory-compactor.log 2>&1
+# subs-check: 04:00 同步 lza6 + reload, 等 subs-check 跑完后转格式 (条件触发暂时还没装)
+0 4 * * * /opt/subs-check/scripts/sync-lza6.py >> /var/log/subs-check-sync.log 2>&1
+# 每 30 分钟刷新一次 v2ray/base64 输出 (subs-check 6h 一轮, 中间可能 all.yaml 不变就 noop)
+*/30 * * * * /opt/subs-check/scripts/convert-formats.py >> /var/log/subs-check-convert.log 2>&1
+# subs-check: 新轮次跑完后 5 分钟内自动 Telegram 推送 (idempotent)
+# subs-check Telegram 推送兜底 (主路径: convert-formats 级联触发, 这是兜底)
+0 * * * * /opt/subs-check/scripts/notify-telegram.py >> /var/log/subs-check-notify.log 2>&1
+# subs-check: 增量节点测试 (TCP+TLS 探活, 每小时 :15, 1-2 分钟跑完)
+15 * * * * /opt/subs-check/scripts/incremental-check.py >> /var/log/subs-check-incremental.log 2>&1
+# subs-check: 拓取每个源 → 建立源-节点映射 (跟着 subs-check 6h 一轮跑)
+5 4,10,16,22 * * * /opt/subs-check/scripts/source-fetcher.py >> /var/log/subs-check-fetcher.log 2>&1
+# v2.3: 周期恢复 (周日 03:00, 无故障源 +5)
+0 3 * * 0 /opt/subs-check/scripts/weekly-recovery.py >> /var/log/subs-check-recovery.log 2>&1
+# v2.3: source_quality_history 清理 30 天前数据 (每天 04:33, 错开 04:30 openclaw-conditional-restart)
+33 4 * * * /opt/subs-check/scripts/source-quality-history-cleanup.py >> /var/log/subs-check-cleanup.log 2>&1
+
+# discover-airports: 每天 02:00 自动发现公益机场源 (避开 04:00 sync-lza6 + dpkg 锁)
+0 2 * * * /opt/subs-check/scripts/discover-airports.py >> /var/log/subs-check-discover.log 2>&1
+# audit-cleanup: 周日 03:30 清理 source_audits 表 (避开 03:00 weekly-recovery + 04:00 sync-lza6)
+30 3 * * 0 /opt/subs-check/scripts/audit-cleanup.py >> /var/log/subs-check-audit-cleanup.log 2>&1

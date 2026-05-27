@@ -1,0 +1,116 @@
+# discover-airports 发现源配置
+# 维护者: 手工添加 / 删除条目即可, 脚本启动时同步到 discovery_state 表
+# priority: 越小越早扫 (1-1000)
+
+# ===== L1: awesome README (10 个公益机场聚合源) =====
+awesome_readme:
+  - key: lza6/free-VPN
+    url: https://raw.githubusercontent.com/lza6/free-VPN/main/README.md
+    priority: 10
+    note: 现行主源 (sync-lza6 已用)
+  - key: ripaojiedian/freenode
+    url: https://raw.githubusercontent.com/ripaojiedian/freenode/main/README.md
+    priority: 50
+  - key: freefq/free
+    url: https://raw.githubusercontent.com/freefq/free/master/README.md
+    priority: 50
+  - key: aiboboxx/v2rayfree
+    url: https://raw.githubusercontent.com/aiboboxx/v2rayfree/main/README.md
+    priority: 60
+  - key: chengaopan/AutoMergePublicNodes
+    url: https://raw.githubusercontent.com/chengaopan/AutoMergePublicNodes/master/README.md
+    priority: 60
+  - key: mahdibland/ShadowsocksAggregator
+    url: https://raw.githubusercontent.com/mahdibland/ShadowsocksAggregator/master/README.md
+    priority: 60
+  - key: peasoft/NoMoreWalls
+    url: https://raw.githubusercontent.com/peasoft/NoMoreWalls/master/README.md
+    priority: 70
+  - key: mfuu/v2ray
+    url: https://raw.githubusercontent.com/mfuu/v2ray/master/README.md
+    priority: 70
+  - key: ts-sf/fly
+    url: https://raw.githubusercontent.com/ts-sf/fly/main/README.md
+    priority: 80
+  - key: sinspired/airport
+    url: https://raw.githubusercontent.com/sinspired/airport/main/README.md
+    priority: 80
+
+# ===== L2: GitHub Topics search (匿名 60req/h, 我们用 6 个 query) =====
+github_topic:
+  - key: topic:free-vpn
+    query: 'topic:free-vpn pushed:>RECENT_30D'
+    priority: 100
+  - key: topic:free-proxy
+    query: 'topic:free-proxy pushed:>RECENT_30D'
+    priority: 100
+  - key: topic:v2ray-config
+    query: 'topic:v2ray-config pushed:>RECENT_30D'
+    priority: 110
+  - key: topic:clash-config
+    query: 'topic:clash-config pushed:>RECENT_30D'
+    priority: 110
+  - key: topic:vless
+    query: 'topic:vless pushed:>RECENT_30D stars:>50'
+    priority: 120
+  - key: topic:shadowsocks-subscription
+    query: 'topic:shadowsocks-subscription pushed:>RECENT_30D'
+    priority: 120
+
+# ===== L3: Telegram channels (用户决定: 暂空, 后续添加) =====
+telegram_channel: []
+
+# ===== L4: 现有源审计配置 =====
+source_audit:
+  enabled: true
+  threshold_score: 80  # 仅扫 sources.score < 此值的源
+  daily_limit: 10
+  re_audit_cooldown_days: 7  # 同源 7 天内不重复 audit
+
+# ===== 安全过滤参数 =====
+security:
+  domain_whitelist:
+    - raw.githubusercontent.com
+    - fastly.jsdelivr.net
+    - cdn.jsdelivr.net
+    - gist.githubusercontent.com
+    - github.io
+    - raw.staticdn.net
+    - gitcode.net  # 国内备用
+  domain_blacklist:
+    - openproxylist.com
+    - git.io
+  keyword_blacklist:
+    - /socks
+    - /http.txt
+    - /https.txt
+    - /socks4.txt
+    - /socks5.txt
+    - hideip.me
+    - BreakingTechFr
+    - zloi-user
+  max_redirect: 5
+  max_response_bytes: 5242880   # 5MB
+  fetch_timeout_sec: 15
+  global_timeout_sec: 3000      # 50 分钟
+
+# ===== 预算 =====
+budget:
+  awesome_readme_per_day: 5
+  github_topic_per_day: 2
+  telegram_channel_per_day: 5
+  source_audit_per_day: 10
+  http_concurrent: 3
+
+# ===== 内容签名 (L4) =====
+content:
+  protocol_markers_min: 3       # 至少 3 个 vless/vmess/ss/trojan 等才算合法订阅
+  html_ratio_max: 0.05          # <html 占比 > 5% 拒绝
+  entropy_max_no_proto: 7.5     # 无协议头但 entropy > 此值视为可疑加密 payload
+
+# ===== Telegram 通知 (合并模式) =====
+notify:
+  enabled: true
+  config_file: /opt/subs-check/scripts/free-pool.conf
+  merge_critical: true
+  min_critical_to_notify: 1     # 1 条 critical 即合并通知

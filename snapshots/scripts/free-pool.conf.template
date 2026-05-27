@@ -1,0 +1,7 @@
+# Free Pool 订阅鉴权 token
+# 32 位 hex, 用于 URL 路径鉴权
+# 改 token 后, 旧链接立刻失效, 需要通知所有用户改订阅
+TOKEN=__REDACTED_32HEX__
+
+# 公开域名 (用于 Telegram 通知里拼完整 URL)
+DOMAIN=example-legacy.duckdns.org

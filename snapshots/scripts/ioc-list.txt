@@ -1,0 +1,31 @@
+# IOC list (L5 layer)
+# 格式: 一行一个域名/URL/关键词, # 开头注释
+# 维护: 手工 + 周期同步公开 IOC 快照
+# 命中即拒绝, 永远不进 sources 表
+
+# === 已知钓鱼/欺诈机场域名 ===
+# (示例占位, 用户可手工添加)
+
+# === 已知恶意 raw 文件 ===
+# (示例占位)
+
+# === 已知投毒 keyword ===
+eval(
+exec(
+base64_decode
+shell_exec
+__import__
+nc -e
+bash -i
+/dev/tcp/
+
+# === 不应出现在订阅文件里的标记 ===
+<script
+javascript:
+data:text/html
+file://
+ftp://
+
+# === 私有/链路本地 IP 段 (已由 SSRF guard 在 socket.getaddrinfo 层强制拒掉) ===
+# 不再做 substring 匹配 — 会误伤 coldwater-10.yaml / project172 等正常文件名
+# 真正的 SSRF 防护在 _safe_getaddrinfo() 实施 (ipaddress.is_private)

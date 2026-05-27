@@ -1,0 +1,17 @@
+[Unit]
+Description=Subs Check - 订阅检测转换工具
+After=network-online.target
+Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/subs-check
+ExecStart=/opt/subs-check/subs-check
+Restart=always
+RestartSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

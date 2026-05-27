@@ -1,0 +1,18 @@
+[Unit]
+Description=Shadowsocks Monitor API
+After=network.target shadowsocks-rust.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/ss-monitor
+ExecStart=/usr/bin/python3 /opt/ss-monitor/api.py
+Restart=on-failure
+RestartSec=5s
+
+# 资源限制
+MemoryMax=50M
+CPUQuota=10%
+
+[Install]
+WantedBy=multi-user.target
