@@ -368,11 +368,11 @@
 
         /* === Source list (TOP / blacklist) === */
         .src-list { font-size: 12px; }
-        .src-row { display: grid; grid-template-columns: auto auto 1fr; gap: 12px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+        .src-row { display: grid; grid-template-columns: auto auto 1fr auto; gap: 12px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--line); }
         .src-row:last-child { border-bottom: none; }
         .src-row .score { color: var(--good); font-weight: 600; min-width: 48px; font-family: var(--font-mono); }
         .src-row .pass { color: var(--text-3); min-width: 56px; font-family: var(--font-mono); font-size: 11px; }
-        .src-row a { color: var(--sky-300); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .src-row a, .src-row .url-cell { color: var(--sky-300); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .src-row a:hover { color: var(--sky-400); }
         .src-row.bl .score { color: var(--err); }
 
