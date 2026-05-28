@@ -906,7 +906,7 @@
                 // 增量探活趨勢 (含 pass/fail bar)
                 const hl = $id('historyList');
                 if (hr.history && hr.history.length > 0) {
-                    hl.innerHTML = hr.history.slice().map(h => {
+                    hl.innerHTML = hr.history.slice().reverse().map(h => {
                         const dt = new Date(h.timestamp);
                         const total = h.total_tested || 0;
                         const passed = h.passed || 0;
