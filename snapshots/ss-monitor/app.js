@@ -1433,10 +1433,10 @@
                 // telegram 默認未啓用, 不變
                 // 現有源審計: 從 audit_severity_30d 取 (不在 kind_summary 裡)
                 const sev30 = d.audit_severity_30d || {};
-                const auditTotal = Object.values(sev30).reduce((a, b) => a + b, 0);
+                const auditTotal30 = Object.values(sev30).reduce((a, b) => a + b, 0);
                 const warnCount = (sev30.warn || 0) + (sev30.critical || 0);
-                const adVal = auditTotal > 0 ? `${auditTotal} 條 / 30天` : '—';
-                const adHint = auditTotal > 0 ? `ℹ️ ${sev30.info || 0} 通過${warnCount > 0 ? ` · ⚠️ ${warnCount} 警告` : ''}` : 'score < 80 才掃';
+                const adVal = auditTotal30 > 0 ? `${auditTotal30} 條 / 30天` : '—';
+                const adHint = auditTotal30 > 0 ? `ℹ️ ${sev30.info || 0} 通過${warnCount > 0 ? ` · ⚠️ ${warnCount} 警告` : ''}` : 'score < 80 才掃';
                 setText('discoverKindAudit', adVal); setText('discoverKindAuditHint', adHint);
 
                 // 最近 7 天新增源 (三檔: 5 → 20 → 全部, 與其他列表統一)
