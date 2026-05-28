@@ -111,22 +111,7 @@ KNOWN_CN_PROXY_APIS = [
         "protocol": "socks5",
         "priority": 25,
     },
-    {
-        "key": "proxyspace-http",
-        "name": "ProxySpace HTTP",
-        "url": "https://proxyspace.pro/http.txt",
-        "format": "lines",
-        "protocol": "http",
-        "priority": 40,
-    },
-    {
-        "key": "proxyspace-socks5",
-        "name": "ProxySpace SOCKS5",
-        "url": "https://proxyspace.pro/socks5.txt",
-        "format": "lines",
-        "protocol": "socks5",
-        "priority": 40,
-    },
+
 ]
 
 # ========== GitHub 搜索关键词 ==========
@@ -276,7 +261,9 @@ def test_source(source):
     else:
         return "fail", 0
 
-    count = len(proxies)
+    # GeoIP 过滤: 只保留 CN 代理
+    cn_proxies = filter_cn_proxies(proxies, source.get("protocol", "http"))
+    count = len(cn_proxies)
     if count == 0:
         return "empty", 0
     return "ok", count
@@ -384,6 +371,42 @@ def discover_from_apis(conn):
     conn.commit()
     return found
 
+
+# ========== GeoIP 过滤 ==========
+# 用 ip-api.com 批量查询, 精确判断 CN IP
+# 免费 API: 45 req/min, 批量 100 IP/次
+
+def filter_cn_proxies(proxies: list, protocol: str = "http") -> list:
+    """过滤代理列表, 只保留 CN IP (用 ip-api.com 批量查询)"""
+    if not proxies:
+        return []
+
+    # 去重
+    unique_ips = list(set(ip for ip, _ in proxies))
+
+    # 批量查询 (ip-api.com 支持批量, 每次最多 100)
+    cn_ips = set()
+    for i in range(0, len(unique_ips), 100):
+        batch = unique_ips[i:i+100]
+        try:
+            import json
+            data = json.dumps(batch)
+            req = urllib.request.Request(
+                "http://ip-api.com/batch",
+                data=data.encode(),
+                headers={"Content-Type": "application/json", "User-Agent": "discover-cn-proxies/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=15) as r:
+                results = json.loads(r.read().decode())
+                for item in results:
+                    if item.get("country") == "China" and item.get("status") == "success":
+                        cn_ips.add(item.get("query", ""))
+        except Exception:
+            pass
+
+    # 过滤: 只保留 CN IP
+    cn_proxies = [(ip, port) for ip, port in proxies if ip in cn_ips]
+    return cn_proxies
 
 def main():
     log("=== CN 代理源发现 开始 ===")

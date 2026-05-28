@@ -23,6 +23,7 @@ v3.0 → v3.1 变更:
 """
 import os
 import sys
+import fcntl
 import sqlite3
 import socket
 import ssl
@@ -41,6 +42,7 @@ import socks
 
 HISTORY_DB = "/opt/subs-check/scripts/history.db"
 NODES_JSON = "/opt/ss-monitor/sub/free/nodes.json"
+LOCK_FILE = "/run/incremental-check.lock"
 
 # ============= v3.1 配置 =============
 CONCURRENT = 20
@@ -309,6 +311,26 @@ def load_targets(db) -> list:
 
 
 def main():
+    # Advisory lock: 防止同时跑
+    lock_fh = open(LOCK_FILE, "w")
+    try:
+        fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print(f"  ⚠️  另一个 incremental-check 正在运行, 跳过")
+        return 0
+
+    try:
+        return _main(lock_fh)
+    finally:
+        fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
+        lock_fh.close()
+        try:
+            os.unlink(LOCK_FILE)
+        except:
+            pass
+
+
+def _main(lock_fh):
     if not os.path.exists(HISTORY_DB):
         print(f"  ℹ️  {HISTORY_DB} 不存在, 跳过")
         return 0
