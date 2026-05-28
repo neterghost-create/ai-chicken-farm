@@ -787,47 +787,41 @@
                 } else {
                     $id('poolTested').textContent = '—';
                 }
-                $id('poolAlive').textContent = prog.alive ?? '—';
-                $id('poolMediaPass').textContent = prog.media_pass ?? '—';
-                $id('poolSpeedPass').textContent = prog.speed_pass ?? '—';
+                // 30min incremental-check 数据
+                const inc = d.incremental_check || {};
+                $id('poolAlive').textContent = inc.passed ?? '—';
+                $id('poolMediaPass').textContent = inc.failed ?? '—';
+                const passRate = inc.pass_rate_avg != null ? (inc.pass_rate_avg * 100).toFixed(1) + '%' : '—';
+                $id('poolSpeedPass').textContent = passRate;
 
-                // 節點池
-                const pool = d.pool || {};
-                $id('poolTotalNodes').textContent = pool.total_nodes ?? '—';
+                // 節點池 (30min incremental-check 状态分布)
+                const sd = d.state_distribution || {};
+                const totalNodes = Object.values(sd).reduce((a, b) => a + b, 0);
+                $id('poolTotalNodes').textContent = totalNodes || inc.total_tested || '—';
 
-                // 協議 chips
+                // 状态 chips (testing/decaying/recovering)
                 const protoEl = $id('poolProtocols');
-                if (pool.protocols) {
-                    protoEl.innerHTML = Object.entries(pool.protocols)
+                if (Object.keys(sd).length > 0) {
+                    const stateColors = {testing: 'vless', decaying: 'trojan', recovering: 'ss'};
+                    protoEl.innerHTML = Object.entries(sd)
                         .sort((a, b) => b[1] - a[1])
-                        .map(([k, v]) => `<span class="chip ${k}">${k}<span class="chip-num">${v}</span></span>`).join('');
+                        .map(([k, v]) => `<span class="chip ${stateColors[k] || ''}">${k}<span class="chip-num">${v}</span></span>`).join('');
                 } else {
                     protoEl.innerHTML = '<span class="chip">—</span>';
                 }
 
-                $id('poolLastRun').textContent = pool.last_run
-                    ? new Date(pool.last_run).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})
+                $id('poolLastRun').textContent = inc.timestamp
+                    ? new Date(inc.timestamp).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})
                     : '—';
 
-                // Hero pool tile
-                $id('heroPoolNodes').innerHTML = `${pool.total_nodes ?? '—'}<small>節點</small>`;
-                if (prog.completed && prog.next_check) {
-                    // 已完成 → 显示距离下次检查倒计时
-                    const nextMs = new Date(prog.next_check.replace(' ', 'T')).getTime() - Date.now();
-                    if (nextMs > 0) {
-                        const mins = Math.floor(nextMs / 60000);
-                        const hours = Math.floor(mins / 60);
-                        const remMins = mins % 60;
-                        const eta = hours > 0 ? `${hours}h${remMins}m` : `${remMins}m`;
-                        $id('heroPoolProg').textContent = `存活 ${prog.alive ?? 0} · 下輪 ${eta} 後`;
-                    } else {
-                        $id('heroPoolProg').textContent = `存活 ${prog.alive ?? 0} · 即將開始`;
-                    }
-                } else if (prog.tested != null && prog.total != null) {
-                    const pct = ((prog.tested / prog.total) * 100).toFixed(0);
-                    $id('heroPoolProg').textContent = `當輪 ${pct}% · 存活 ${prog.alive ?? 0}`;
+                // Hero pool tile (30min incremental-check)
+                $id('heroPoolNodes').innerHTML = `${totalNodes || inc.total_tested || '—'}<small>節點</small>`;
+                if (inc.timestamp) {
+                    const elapsed = inc.elapsed_sec != null ? inc.elapsed_sec.toFixed(0) + 's' : '';
+                    const passRate = inc.pass_rate_avg != null ? (inc.pass_rate_avg * 100).toFixed(0) + '%' : '';
+                    $id('heroPoolProg').textContent = `通過 ${inc.passed ?? 0}/${inc.total_tested ?? 0} · ${passRate} · ${elapsed}`;
                 } else {
-                    $id('heroPoolProg').textContent = `存活 ${prog.alive ?? '—'}`;
+                    $id('heroPoolProg').textContent = `等待首次探活`;
                 }
                 $id('heroPool').classList.remove('ok','warn','err');
                 $id('heroPool').classList.add(d.service_running ? 'ok' : 'err');
