@@ -1469,13 +1469,14 @@
                         const limitInfo = computeLimit(stage, items.length, 20);
                         const { take } = limitInfo;
                         auditEl.innerHTML = items.slice(0, take).map(a => {
-                            const shortUrl = a.source_url.length > 60 ? a.source_url.slice(0, 60) + '…' : a.source_url;
+                            const shortUrl = a.source_url.length > 50 ? a.source_url.slice(0, 50) + '…' : a.source_url;
                             const at = a.audited_at ? new Date(a.audited_at).toLocaleString('zh-Hant', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
-                            return `<div class="src-row" title="${esc(a.source_url)}\n${esc(a.finding || '')}">
+                            const finding = a.finding && a.finding !== 'audit_pass' ? a.finding : (a.severity === 'info' ? '通過' : a.finding || a.severity);
+                            return `<div class="src-row audit-row" title="${esc(a.source_url)}\n${esc(a.finding || '')}">
                                 <span class="score" style="color:${sevColor(a.severity)}; font-weight:700;">${sevIcon(a.severity)}</span>
                                 <span class="pass" style="color:var(--text-3);">${at}</span>
-                                <span style="color:var(--text-2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(shortUrl)}</span>
-                                <span class="pass" style="color:${sevColor(a.severity)};">${esc(a.finding || a.severity)}</span>
+                                <span style="color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(shortUrl)}</span>
+                                <span class="pass" style="color:${sevColor(a.severity)};">${esc(finding)}</span>
                             </div>`;
                         }).join('') + renderLimitDiv('discoverAuditList', items.length, take, limitInfo, () => loadDiscover());
                     }
