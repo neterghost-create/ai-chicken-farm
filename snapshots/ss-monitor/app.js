@@ -1069,8 +1069,8 @@
                         return `<tr>
                             <td class="name-cell" title="${esc(n.name || n.sig)}">${esc(n.name || n.sig)}</td>
                             <td><span class="score-pill ${scorePillClass(sc)}">${sc.toFixed(0)}</span></td>
-                            <td><span class="chip ${n.protocol || ''}" style="font-size:10px;">${n.protocol || '—'}</span></td>
-                            <td class="col-hide-sm">${n.region || '—'}</td>
+                            <td><span class="chip ${esc(n.protocol || '')}" style="font-size:10px;">${esc(n.protocol || '—')}</span></td>
+                            <td class="col-hide-sm">${esc(n.region || '—')}</td>
                             <td>${speedTextFor(n.avg_speed_kbps)}</td>
                             <td class="col-hide-sm" style="color:var(--text-2);">${speedTextFor(n.last_speed_kbps)}</td>
                             <td class="col-hide-sm" style="color:var(--text-3);">${n.appearances}</td>

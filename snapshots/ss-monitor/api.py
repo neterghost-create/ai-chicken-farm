@@ -10,7 +10,11 @@ import re
 import os
 import json
 import sqlite3
+import logging
 from datetime import datetime, timedelta, timezone
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -22,11 +26,11 @@ SUBS_CHECK_CONFIG = "/opt/subs-check/config/config.yaml"
 CN_PROXY_SOURCES_DB = "/opt/subs-check/scripts/cn-proxy-sources.db"
 
 def run_command(cmd):
-    """执行系统命令"""
+    """执行系统命令 (全部硬编码, 无用户输入)"""
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=5)
         return result.stdout.strip()
-    except:
+    except Exception:
         return ""
 
 def get_service_status():
@@ -39,7 +43,7 @@ def get_active_connections():
     output = run_command("netstat -anp | grep ESTABLISHED | grep 2052 | wc -l")
     try:
         return int(output)
-    except:
+    except Exception:
         return 0
 
 def get_connection_list():
@@ -60,7 +64,7 @@ def get_total_connections():
     output = run_command("netstat -an | grep 2052 | wc -l")
     try:
         return int(output)
-    except:
+    except Exception:
         return 0
 
 def get_uptime():
@@ -86,7 +90,7 @@ def get_uptime():
             return f"{hours}小时{minutes}分钟"
         else:
             return f"{minutes}分钟"
-    except:
+    except Exception:
         return "-"
 
 def get_memory_usage():
@@ -99,7 +103,7 @@ def get_memory_usage():
         else:
             mb = kb / 1024
             return f"{mb:.1f} MB"
-    except:
+    except Exception:
         return "-"
 
 @app.route('/api/ss-status')
