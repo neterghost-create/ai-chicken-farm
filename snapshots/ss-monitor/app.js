@@ -815,7 +815,7 @@
                 // 節點池 (30min incremental-check 状态分布)
                 const sd = d.state_distribution || {};
                 const totalNodes = Object.values(sd).reduce((a, b) => a + b, 0);
-                $id('poolTotalNodes').textContent = totalNodes || inc.total_tested || '—';
+                $id('poolTotalNodes').textContent = totalNodes || '—';
 
                 // 状态 chips (testing/decaying/recovering)
                 const protoEl = $id('poolProtocols');
