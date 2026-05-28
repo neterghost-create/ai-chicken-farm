@@ -867,21 +867,6 @@
                 } else {
                     topEl.innerHTML = '<div class="empty">暫無數據</div>';
                 }
-
-                const blEl = $id('dbBlacklisted');
-                if (sdb.blacklisted && sdb.blacklisted.length > 0) {
-                    blEl.innerHTML = sdb.blacklisted.map(b => {
-                        const until = b.until ? new Date(b.until).toLocaleString('zh-CN') : '—';
-                        const su = smartUrl(b.url);
-                        return `<div class="src-row bl">
-                            <span class="score">⛔</span>
-                            <span class="pass">${until}</span>
-                            <a href="${b.url}" target="_blank" rel="noopener" title="${esc(su.full)}">${esc(su.text)}</a>
-                        </div>`;
-                    }).join('');
-                } else {
-                    blEl.innerHTML = '<div class="empty" style="color:var(--good);">✓ 無黑名單源</div>';
-                }
             } catch (e) {
                 console.error('免費池加載失敗:', e);
                 setBadge($id('poolServiceStatus'), 'API 錯誤', 'err');
@@ -1022,8 +1007,6 @@
                 const s = d.summary || {};
                 $id('qTotal').textContent = s.total ?? '—';
                 $id('qActive').textContent = s.active ?? '—';
-                $id('qBlacklisted').textContent = s.blacklisted ?? '—';
-
                 // bands 柱狀圖 (從高分到低分排序, <30 危險放最後)
                 const bandsRaw = d.score_bands || [];
                 // 排序: 從每個 band 名稱抓首個數字, 高的在前; <X 視為 -1 排最後
@@ -1096,30 +1079,6 @@
                         </tr>`;
                     }).join('') + renderLimitRow(9, 'qTopBody', top.length, take, limitInfo, () => loadQuality());
                 }
-
-                // 黑名單 (三檔: 5 → 全部, 數據量通常 < 100 跳過 mid)
-                const blEl = $id('qBlacklistList');
-                const bl = d.blacklist || [];
-                if (bl.length === 0) {
-                    blEl.innerHTML = '<div class="empty" style="color:var(--good);">✓ 無節點級黑名單</div>';
-                } else {
-                    const stage = getTableStage('qBlacklist');
-                    const limitInfo = computeLimit(stage, bl.length, 0);
-                    const { take } = limitInfo;
-                    const renderBl = bl.slice(0, take);
-                    blEl.innerHTML = renderBl.map(b => {
-                        const until = b.until ? new Date(b.until).toLocaleString('zh-CN') : '—';
-                        return `<div class="src-row bl">
-                            <span class="score">⛔</span>
-                            <span class="pass" style="font-family: var(--font-mono);">${b.region || '—'}·${b.protocol || '—'}</span>
-                            <div style="display:flex; justify-content:space-between; gap:10px;">
-                                <span style="color:var(--text-2); font-family:var(--font-mono); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${b.sig}</span>
-                                <span style="color:var(--text-3); font-size:11px;">解封 ${until}</span>
-                            </div>
-                        </div>`;
-                    }).join('') + renderLimitDiv('qBlacklist', bl.length, take, limitInfo, () => loadQuality());
-                }
-
                 // CN 代理探活
                 const cnProxy = d.cn_proxy;
                 const cnStatsEl = $id('qCnProxyStats');
@@ -1302,9 +1261,7 @@
                     ? `<span class="badge err" title="recovering: 触底, 被动恢复"><span class="dot"></span>▲ ${state}</span>`
                     : `<span class="badge neutral" title="testing: 主测试态"><span class="dot"></span>● ${state}</span>`;
 
-                const statusBadge = s.status === 'blacklisted'
-                    ? `<span class="badge err">${t('status.blacklisted')}</span>`
-                    : s.status === 'whitelisted'
+                const statusBadge = s.status === 'whitelisted'
                     ? `<span class="badge ok">${t('status.whitelisted')}</span>`
                     : `<span class="badge neutral">${t('status.candidate')}</span>`;
 

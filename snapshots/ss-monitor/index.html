@@ -273,7 +273,6 @@
             <div class="stat-grid">
                 <div class="stat-tile"><div class="label">歷史已知節點</div><div class="value" id="qTotal">—</div></div>
                 <div class="stat-tile"><div class="label">活躍節點</div><div class="value" id="qActive" style="color:var(--good);">—</div></div>
-                <div class="stat-tile"><div class="label">黑名單 48h</div><div class="value" id="qBlacklisted" style="color:var(--err);">—</div></div>
             </div>
 
             <div class="section-title" style="margin-top:18px;">📊 評分分佈</div>
@@ -298,10 +297,6 @@
                     <tbody id="qTopBody"></tbody>
                 </table>
             </div></div>
-
-            <div class="section-title" style="margin-top:18px;">⛔ 黑名單 (節點級, 自動 48h 解封)</div>
-            <div id="qBlacklistList" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
-
             <div class="section-title" style="margin-top:18px;">🛜 CN 代理探活</div>
             <div id="qCnProxyStats" class="stat-grid" style="margin-bottom:10px;"></div>
             <div id="qCnProxySources" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
@@ -354,8 +349,6 @@
             <div style="margin-top:14px;">
                 <div style="font-size:12px; color:var(--text-2); margin-bottom:8px;">🌟 TOP 5 候選源 (按評分庫通過率)</div>
                 <div class="src-list" id="dbTopSources" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
-                <div style="font-size:12px; color:var(--text-2); margin:14px 0 8px;">⛔ 黑名單源 (按解封時間)</div>
-                <div class="src-list" id="dbBlacklisted" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
             </div>
 
             <div class="section-title" style="margin-top:18px;">📊 大輪進度 (6h)</div>

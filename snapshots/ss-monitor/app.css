@@ -369,8 +369,6 @@
         .src-row .pass { color: var(--text-3); min-width: 56px; font-family: var(--font-mono); font-size: 11px; }
         .src-row a, .src-row .url-cell { color: var(--sky-300); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .src-row a:hover { color: var(--sky-400); }
-        .src-row.bl .score { color: var(--err); }
-
         /* === Diff stats === */
         .diff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .diff-tile {
