@@ -10,7 +10,7 @@
                 'header.live': '咯咯',
                 'header.subtitle': '養殖數據 · 24h 直播',
                 // hero
-                'hero.ss': '雞霸王', 'hero.vps': '雞舍', 'hero.pool': '蛋池', 'hero.feed': '飼料源',
+                'hero.ss': '雞霸王', 'hero.vps': '雞舍', 'hero.pool': '蛋池', 'hero.feed': '飼料廠',
                 'hero.checking': '檢測中...',
                 // 雞霸王三態 (running+有連接=活著 / running 無連接=無人理 / 不 running=救救我)
                 'ss.state.alive': '活著',
@@ -130,7 +130,7 @@
             'zh-Hans': {
                 'header.live': '咯咯',
                 'header.subtitle': '养殖数据 · 24h 直播',
-                'hero.ss': '鸡霸王', 'hero.vps': '鸡舍', 'hero.pool': '蛋池', 'hero.feed': '饲料源',
+                'hero.ss': '鸡霸王', 'hero.vps': '鸡舍', 'hero.pool': '蛋池', 'hero.feed': '饲料厂',
                 'hero.checking': '检测中...',
                 // 鸡霸王三态
                 'ss.state.alive': '活着',
@@ -1218,8 +1218,14 @@
                 $id('srcMatKnown').textContent = mc.known ?? '—';
 
                 // Hero src tile
-                $id('heroSrcCount').innerHTML = `${d.total_sources ?? '—'}<small>源</small>`;
-                $id('heroSrcMaturity').textContent = `🟢${mc.scored ?? 0} · 🟡${mc.mapped ?? 0} · ⚪${mc.known ?? 0}`;
+                // Hero 飼料廠 — 改用 sources_db 數據（與飼料廠 section 同源）
+                const sdb = d.sources_db || {};
+                $id('heroSrcCount').innerHTML = `${sdb.total_sources ?? '—'}<small>源</small>`;
+                const sc = sdb.status_counts || {};
+                const scored = sc.active || sc.scored || 0;
+                const mapped = sc.testing || sc.mapped || 0;
+                const known = sc.candidate || sc.known || 0;
+                $id('heroSrcMaturity').textContent = `🟢${scored} · 🟡${mapped} · ⚪${known}`;
                 $id('heroSrc').classList.remove('warn','err','ok');
                 $id('heroSrc').classList.add('ok');
 
