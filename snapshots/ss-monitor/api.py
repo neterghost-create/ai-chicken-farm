@@ -19,6 +19,7 @@ SUBS_CHECK_OUTPUT = "/opt/ss-monitor/sub/free"
 SUBS_CHECK_STATS = "/opt/ss-monitor/sub/free/stats.json"
 SUBS_CHECK_DB = "/opt/subs-check/scripts/source-scores.db"
 SUBS_CHECK_CONFIG = "/opt/subs-check/config/config.yaml"
+CN_PROXY_SOURCES_DB = "/opt/subs-check/scripts/cn-proxy-sources.db"
 
 def run_command(cmd):
     """执行系统命令"""
@@ -213,6 +214,42 @@ def get_pool_stats():
             return json.load(f)
     except Exception:
         return None
+
+
+def get_cn_proxy_stats():
+    """读 cn-proxy-sources.db 统计 CN 代理源状态"""
+    if not os.path.exists(CN_PROXY_SOURCES_DB):
+        return None
+    try:
+        db = sqlite3.connect(CN_PROXY_SOURCES_DB)
+        rows = db.execute(
+            "SELECT name, protocol, last_status, last_proxy_count, last_checked_at "
+            "FROM cn_proxy_sources WHERE enabled = 1 ORDER BY last_status DESC, last_proxy_count DESC"
+        ).fetchall()
+        total_sources = len(rows)
+        available = sum(1 for r in rows if r[2] == 'ok')
+        total_proxies = sum(r[3] or 0 for r in rows if r[2] == 'ok')
+        last_discovery = db.execute(
+            "SELECT MAX(last_checked_at) FROM cn_proxy_sources WHERE enabled = 1"
+        ).fetchone()[0]
+        db.close()
+        return {
+            'total_sources': total_sources,
+            'available_sources': available,
+            'total_proxies': total_proxies,
+            'last_discovery': last_discovery,
+            'sources': [
+                {
+                    'name': r[0],
+                    'protocol': r[1],
+                    'status': r[2],
+                    'proxy_count': r[3] or 0,
+                    'last_checked': r[4],
+                } for r in rows
+            ],
+        }
+    except Exception as e:
+        return {'error': str(e)}
 
 
 def get_source_db_stats():
@@ -455,6 +492,7 @@ def get_quality():
                     'name': r[5],
                 } for r in bl
             ],
+            'cn_proxy': get_cn_proxy_stats(),
             'rules_version': 'v3.0',
             'state_threshold': 50,
             'timestamp': datetime.now().isoformat()

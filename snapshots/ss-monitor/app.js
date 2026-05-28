@@ -99,6 +99,12 @@
                 'src.limitToggle.title': '限制渲染前 50 個源 · 大幅提升頁面響應速度',
                 // 节点级评分卡 (qualityCard)
                 'quality.title': '飼料',
+                'quality.cnProxy': '🛜 CN 代理探活',
+                'quality.cnProxy.totalSources': '代理源總數',
+                'quality.cnProxy.available': '可用源',
+                'quality.cnProxy.totalProxies': '可用代理數',
+                'quality.cnProxy.lastDiscovery': '上次發現',
+                'quality.cnProxy.sources': '代理源列表',
                 // 源级评分卡 (srcCard)
                 'src.title': '飼料廠',
                 // 表头共用
@@ -194,6 +200,12 @@
                 'src.limitToggle': '只炫前 50 个源',
                 'src.limitToggle.title': '限制渲染前 50 个源 · 大幅提升页面响应速度',
                 'quality.title': '饲料',
+                'quality.cnProxy': '🛜 CN 代理探活',
+                'quality.cnProxy.totalSources': '代理源总数',
+                'quality.cnProxy.available': '可用源',
+                'quality.cnProxy.totalProxies': '可用代理数',
+                'quality.cnProxy.lastDiscovery': '上次发现',
+                'quality.cnProxy.sources': '代理源列表',
                 'src.title': '饲料厂',
                 'node.col.score': '质量', 'node.col.round': '轮',
                 'node.col.streak': '连', 'node.col.avgSpeed': '均速',
@@ -286,6 +298,12 @@
                 'src.limitToggle': 'Top 50 only',
                 'src.limitToggle.title': 'Render top 50 only · faster response',
                 'quality.title': 'Feed',
+                'quality.cnProxy': '🛜 CN Proxy',
+                'quality.cnProxy.totalSources': 'Total Sources',
+                'quality.cnProxy.available': 'Available',
+                'quality.cnProxy.totalProxies': 'Total Proxies',
+                'quality.cnProxy.lastDiscovery': 'Last Discovery',
+                'quality.cnProxy.sources': 'Proxy Sources',
                 'src.title': 'Feed Mill',
                 'node.col.score': 'Quality', 'node.col.round': 'Round',
                 'node.col.streak': 'Streak', 'node.col.avgSpeed': 'Avg Speed',
@@ -1064,6 +1082,54 @@
                             </div>
                         </div>`;
                     }).join('') + renderLimitDiv('qBlacklist', bl.length, take, limitInfo, () => loadQuality());
+                }
+
+                // CN 代理探活
+                const cnProxy = d.cn_proxy;
+                const cnStatsEl = $id('qCnProxyStats');
+                const cnSrcEl = $id('qCnProxySources');
+                if (!cnProxy || cnProxy.error) {
+                    if (cnStatsEl) cnStatsEl.innerHTML = '';
+                    if (cnSrcEl) cnSrcEl.innerHTML = `<div class="empty">${cnProxy ? cnProxy.error : 'cn-proxy-sources.db 尚未生成'}</div>`;
+                } else {
+                    // 摘要统计
+                    if (cnStatsEl) {
+                        const lastDisc = cnProxy.last_discovery
+                            ? new Date(cnProxy.last_discovery).toLocaleString(__lang === 'en' ? 'en-US' : 'zh-TW')
+                            : '—';
+                        cnStatsEl.innerHTML = `
+                            <div class="stat-tile"><div class="label">${t('quality.cnProxy.totalSources')}</div><div class="value">${cnProxy.total_sources}</div></div>
+                            <div class="stat-tile"><div class="label">${t('quality.cnProxy.available')}</div><div class="value" style="color:var(--good);">${cnProxy.available_sources}</div></div>
+                            <div class="stat-tile"><div class="label">${t('quality.cnProxy.totalProxies')}</div><div class="value" style="color:var(--sky-400);">${cnProxy.total_proxies}</div></div>
+                            <div class="stat-tile"><div class="label">${t('quality.cnProxy.lastDiscovery')}</div><div class="value" style="font-size:12px;">${lastDisc}</div></div>
+                        `;
+                    }
+                    // 源列表
+                    if (cnSrcEl) {
+                        const sources = cnProxy.sources || [];
+                        if (sources.length === 0) {
+                            cnSrcEl.innerHTML = '<div class="empty">無代理源</div>';
+                        } else {
+                            cnSrcEl.innerHTML = sources.map(src => {
+                                const statusColor = src.status === 'ok' ? 'var(--good)' : src.status === 'fail' ? 'var(--err)' : 'var(--warn)';
+                                const statusIcon = src.status === 'ok' ? '✓' : src.status === 'fail' ? '✗' : '?';
+                                const checked = src.last_checked
+                                    ? new Date(src.last_checked).toLocaleString(__lang === 'en' ? 'en-US' : 'zh-TW')
+                                    : '—';
+                                return `<div class="src-row" style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border);">
+                                    <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                                        <span style="color:${statusColor}; font-weight:600;">${statusIcon}</span>
+                                        <span style="font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(src.name)}</span>
+                                        <span class="chip ${src.protocol}" style="font-size:10px;">${src.protocol}</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:12px; flex-shrink:0; font-size:11px; color:var(--text-3);">
+                                        <span style="color:var(--text-2); font-family:var(--font-mono);">${src.proxy_count} proxies</span>
+                                        <span>${checked}</span>
+                                    </div>
+                                </div>`;
+                            }).join('');
+                        }
+                    }
                 }
             } catch (e) {
                 console.error('節點質量加載失敗:', e);
