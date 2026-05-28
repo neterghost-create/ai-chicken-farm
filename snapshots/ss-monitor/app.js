@@ -553,7 +553,7 @@
         // taken: 當前已渲染數
         // limitInfo: { nextStage, nextLabel, prevStage, prevLabel } 來自 computeLimit
         // rerender: 切換後重渲染的回調
-        // table: true=表格 wrap tr/td, false=div wrap (黑名單等列表用)
+        // table: true=表格 wrap tr/td, false=div wrap (列表用)
         // colspan: 僅 table=true 時用
         function _buildLimitLinks(tableId, total, taken, limitInfo, rerender) {
             const links = [];

@@ -313,9 +313,8 @@
                   默認 score=50 中點起跑 ·
                   testing 主測 ↔ decaying(▼) ↔ recovering(▲) · 無黑名單 ·
                   fetch_ok +3 / fail -10 / empty -5 ·
-                  累計 <code id="srcKillTotal">15</code> 輪 score &lt; <code id="srcLowScoreCutoff">30</code> → ④ 拉黑 ·
-                  連續 <code id="srcFailThreshold">3</code> 次拉取失敗 → ① 拉黑 ·
-                  黑名單 30 天到期重返雞舍
+                  score 觸 0 → recovering(被動恢復) ·
+                  score 觸 100 → decaying(被動衰減)
                 </div>
             <span class="collapse-arrow" aria-hidden="true">▾</span>
             </div>

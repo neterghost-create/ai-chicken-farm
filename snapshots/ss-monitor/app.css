@@ -361,7 +361,7 @@
         .history-item .round-delta { font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
         .history-item .protos { grid-column: 1 / -1; padding-top: 4px; border-top: 1px dashed var(--line); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 4px; }
 
-        /* === Source list (TOP / blacklist) === */
+        /* === Source list (TOP / low quality) === */
         .src-list { font-size: 12px; }
         .src-row { display: grid; grid-template-columns: auto auto 1fr auto; gap: 12px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--line); }
         .src-row:last-child { border-bottom: none; }
