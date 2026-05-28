@@ -1100,8 +1100,8 @@
                         cnStatsEl.innerHTML = `
                             <div class="stat-tile"><div class="label">${t('quality.cnProxy.totalSources')}</div><div class="value">${cnProxy.total_sources}</div></div>
                             <div class="stat-tile"><div class="label">${t('quality.cnProxy.available')}</div><div class="value" style="color:var(--good);">${cnProxy.available_sources}</div></div>
-                            <div class="stat-tile"><div class="label">${t('quality.cnProxy.totalProxies')}</div><div class="value" style="color:var(--sky-400);">${cnProxy.total_proxies}</div></div>
-                            <div class="stat-tile"><div class="label">${t('quality.cnProxy.lastDiscovery')}</div><div class="value" style="font-size:12px;">${lastDisc}</div></div>
+                            <div class="stat-tile"><div class="label">${t('quality.cnProxy.totalProxies')}</div><div class="value">${cnProxy.total_proxies.toLocaleString()}</div></div>
+                            <div class="stat-tile"><div class="label">${t('quality.cnProxy.lastDiscovery')}</div><div class="value"><span style="font-size:13px;font-weight:500;">${lastDisc}</span></div></div>
                         `;
                     }
                     // 源列表
@@ -1116,15 +1116,15 @@
                                 const checked = src.last_checked
                                     ? new Date(src.last_checked).toLocaleString(__lang === 'en' ? 'en-US' : 'zh-TW')
                                     : '—';
-                                return `<div class="src-row" style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border);">
-                                    <div style="display:flex; align-items:center; gap:8px; min-width:0;">
-                                        <span style="color:${statusColor}; font-weight:600;">${statusIcon}</span>
-                                        <span style="font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(src.name)}</span>
-                                        <span class="chip ${src.protocol}" style="font-size:10px;">${src.protocol}</span>
+                                return `<div class="kv-row">
+                                    <div class="k" style="display:flex;align-items:center;gap:6px;min-width:0;">
+                                        <span style="color:${statusColor};font-weight:600;">${statusIcon}</span>
+                                        <span class="chip ${src.protocol}">${src.protocol}</span>
+                                        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(src.name)}</span>
                                     </div>
-                                    <div style="display:flex; align-items:center; gap:12px; flex-shrink:0; font-size:11px; color:var(--text-3);">
-                                        <span style="color:var(--text-2); font-family:var(--font-mono);">${src.proxy_count} proxies</span>
-                                        <span>${checked}</span>
+                                    <div class="v">
+                                        <span style="color:var(--text-2);">${src.proxy_count}</span>
+                                        <span style="color:var(--text-3);font-size:11px;">${checked}</span>
                                     </div>
                                 </div>`;
                             }).join('');
