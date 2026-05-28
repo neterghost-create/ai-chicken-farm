@@ -253,7 +253,8 @@ def get_cn_proxy_stats():
             ],
         }
     except Exception as e:
-        return {'error': str(e)}
+        logger.exception("Error in get_cn_proxy_stats")
+        return {'error': 'Internal server error'}
 
 
 def get_source_db_stats():
@@ -288,7 +289,8 @@ def get_source_db_stats():
             'last_sync_at': last_sync[0] if last_sync else None,
         }
     except Exception as e:
-        return {'error': str(e)}
+        logger.exception("Error in get_source_db_stats")
+        return {'error': 'Internal server error'}
 
 
 @app.route('/api/free-pool')
@@ -507,7 +509,11 @@ def get_quality():
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.exception("Error in get_quality")
+        return jsonify({'error': 'Internal server error'}), 500
+    finally:
+        try: db.close()
+        except Exception: pass
 
 
 @app.route('/api/free-pool/sources')
@@ -668,7 +674,11 @@ def get_sources():
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.exception("Error in get_sources")
+        return jsonify({'error': 'Internal server error'}), 500
+    finally:
+        try: db.close()
+        except Exception: pass
 
 
 # ===== VPS 服务器状态 (基于 /proc, 不依赖 psutil) =====
@@ -1027,7 +1037,8 @@ def get_discover():
             'audit_recent_20': audit_recent,
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.exception("Error in get_discover")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 if __name__ == '__main__':
