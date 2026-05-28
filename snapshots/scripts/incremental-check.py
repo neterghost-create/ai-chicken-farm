@@ -60,24 +60,56 @@ CN_PROXY_MIN = 1                # 最少需要 N 个可用代理 (低于此值�
 
 
 def fetch_cn_proxies() -> list:
-    """从 ProxyScrape API 拉取 CN 代理列表, 返回 [(proto, host, port), ...]"""
+    """从 cn-proxy-sources.db 读取可用源, 拉取代理列表, 返回 [(proto, host, port), ...]"""
     proxies = []
+    sources = []
 
-    for proto in ["socks5", "http"]:
+    # 从数据库读取可用源
+    try:
+        db_path = os.path.join(os.path.dirname(HISTORY_DB), "cn-proxy-sources.db")
+        if os.path.exists(db_path):
+            sdb = sqlite3.connect(db_path, timeout=10)
+            rows = sdb.execute(
+                "SELECT url, protocol, format FROM cn_proxy_sources WHERE enabled=1 AND last_status='ok' ORDER BY priority"
+            ).fetchall()
+            sdb.close()
+            sources = [{"url": r[0], "protocol": r[1], "format": r[2]} for r in rows]
+    except Exception:
+        pass
+
+    # 回退: 如果数据库没有可用源, 用硬编码 API
+    if not sources:
+        sources = [
+            {"url": CN_PROXY_API.format(proto="socks5"), "protocol": "socks5", "format": "lines"},
+            {"url": CN_PROXY_API.format(proto="http"), "protocol": "http", "format": "lines"},
+        ]
+
+    for src in sources:
         try:
-            url = CN_PROXY_API.format(proto=proto)
-            req = urllib.request.Request(url, headers={"User-Agent": "subs-check/3.1"})
+            req = urllib.request.Request(src["url"], headers={"User-Agent": "subs-check/3.1"})
             with urllib.request.urlopen(req, timeout=10) as r:
-                lines = r.read().decode("utf-8", errors="ignore").strip().split("\n")
-                for line in lines:
+                text = r.read().decode("utf-8", errors="ignore")
+
+            if src["format"] == "lines":
+                for line in text.strip().split("\n"):
                     line = line.strip()
                     if ":" in line and not line.startswith("#"):
                         parts = line.rsplit(":", 1)
                         if len(parts) == 2:
                             try:
-                                proxies.append((proto, parts[0].strip(), int(parts[1].strip())))
+                                proxies.append((src["protocol"], parts[0].strip(), int(parts[1].strip())))
                             except ValueError:
                                 pass
+            elif src["format"] == "json":
+                try:
+                    data = json.loads(text)
+                    for item in data.get("data", []):
+                        ip = item.get("ip")
+                        port = item.get("port")
+                        if ip and port:
+                            proxies.append((src["protocol"], ip, int(port)))
+                except:
+                    pass
         except Exception:
             pass
 

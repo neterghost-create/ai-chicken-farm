@@ -1,0 +1,2 @@
+# CN 代理源发现 — 每 6 小时
+0 */6 * * * root /usr/bin/python3 /opt/subs-check/scripts/discover-cn-proxies.py >> /var/log/discover-cn-proxies.log 2>&1
