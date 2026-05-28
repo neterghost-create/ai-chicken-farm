@@ -778,26 +778,15 @@
                     setBadge(pipelineBadge, t('pool.pipeline.unknown'), '');
                 }
 
-                // ---- poolTested 主數字 ----
-                if (prog.completed) {
-                    let suffix;
-                    if (etaText) {
-                        suffix = t('pool.tested.completed.suffix').replace('{eta}', etaText);
-                    } else if (etaImminent) {
-                        suffix = t('pool.tested.completed.imminent');
-                    } else {
-                        // 沒有 next_check → fallback 顯示總檢測數 (兼容老路徑)
-                        suffix = t('pool.tested.completed.fallback').replace('{n}', prog.total ?? 0);
-                    }
-                    $id('poolTested').innerHTML = `<span style="color:var(--good);">${t('pool.tested.completed.eta')}</span><small style="font-size:12px; color:var(--text-3);"> · ${suffix}</small>`;
-                } else if (prog.tested != null && prog.total != null) {
-                    const pct = ((prog.tested / prog.total) * 100).toFixed(1);
-                    $id('poolTested').innerHTML = `${prog.tested}/${prog.total}<small style="font-size:12px; color:var(--text-3);"> · ${pct}%</small>`;
+                // ---- poolTested 主數字 ---- (改用增量探活數據，而非大輪進度)
+                // 30min incremental-check 数据
+                const inc = d.incremental_check || {};
+                if (inc.total_tested != null) {
+                    const pct = inc.pass_rate_avg != null ? (inc.pass_rate_avg * 100).toFixed(1) : '?';
+                    $id('poolTested').innerHTML = `${inc.total_tested}<small style="font-size:12px; color:var(--text-3);"> · 通過率 ${pct}%</small>`;
                 } else {
                     $id('poolTested').textContent = '—';
                 }
-                // 30min incremental-check 数据
-                const inc = d.incremental_check || {};
                 $id('poolAlive').textContent = inc.passed ?? '—';
                 $id('poolMediaPass').textContent = inc.failed ?? '—';
                 const passRate = inc.pass_rate_avg != null ? (inc.pass_rate_avg * 100).toFixed(1) + '%' : '—';
