@@ -931,13 +931,13 @@
                             <span class="round-id" style="color:${prColor};">${prPct}%</span>
                             <div>
                                 <span class="round-time">${dt.toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})}</span>
-                                <div style="margin-top:3px; display:flex; background:rgba(0,0,0,0.3); border-radius:3px; height:6px; overflow:hidden;">
-                                    <div style="width:${passW}%; height:100%; background:var(--good);"></div>
-                                    <div style="width:${failW}%; height:100%; background:var(--err);"></div>
+                                <div class="history-bar">
+                                    <div style="width:${passW}%; background:var(--good);"></div>
+                                    <div style="width:${failW}%; background:var(--err);"></div>
                                 </div>
                             </div>
                             <span class="round-nodes">${passed}/${total}</span>
-                            <span style="color:var(--text-3); font-size:11px;">${meta.join(' · ')}</span>
+                            <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">${meta.join('')}</div>
                         </div>`;
                     }).join('');
                 } else {
