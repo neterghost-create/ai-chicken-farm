@@ -240,7 +240,7 @@
             'en': {
                 'header.live': 'LIVE',
                 'header.subtitle': 'Farm Data · 24h Live',
-                'hero.ss': 'Rooster King', 'hero.vps': 'Coop', 'hero.pool': 'Egg Pool', 'hero.feed': 'Feed Sources',
+                'hero.ss': 'Rooster King', 'hero.vps': 'Coop', 'hero.pool': 'Egg Pool', 'hero.feed': 'Feed Mill',
                 'hero.checking': 'Checking...',
                 // SS chicken triple state
                 'ss.state.alive': 'Alive',
@@ -843,8 +843,18 @@
                 $id('heroPool').classList.remove('ok','warn','err');
                 $id('heroPool').classList.add('ok');
 
-                // 評分庫
+                // Hero 飼料廠（與飼料廠 section 同源 sources_db）
                 const sdb = d.sources_db || {};
+                $id('heroSrcCount').innerHTML = `${sdb.total_sources ?? '—'}<small>源</small>`;
+                const sc = sdb.status_counts || {};
+                const scored = sc.active || sc.scored || 0;
+                const mapped = sc.testing || sc.mapped || 0;
+                const known = sc.candidate || sc.known || 0;
+                $id('heroSrcMaturity').textContent = `🟢${scored} · 🟡${mapped} · ⚪${known}`;
+                $id('heroSrc').classList.remove('warn','err','ok');
+                $id('heroSrc').classList.add('ok');
+
+                // 評分庫
                 $id('dbTotalSources').textContent = sdb.total_sources ?? '—';
                 $id('dbStatusCounts').textContent = sdb.status_counts
                     ? Object.entries(sdb.status_counts).map(([k, v]) => `${k}:${v}`).join(' · ')
