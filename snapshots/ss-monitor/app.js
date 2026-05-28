@@ -826,14 +826,13 @@
                 // Hero pool tile (30min incremental-check)
                 $id('heroPoolNodes').innerHTML = `${totalNodes || inc.total_tested || '—'}<small>節點</small>`;
                 if (inc.timestamp) {
-                    const elapsed = inc.elapsed_sec != null ? inc.elapsed_sec.toFixed(0) + 's' : '';
-                    const passRate = inc.pass_rate_avg != null ? (inc.pass_rate_avg * 100).toFixed(0) + '%' : '';
-                    $id('heroPoolProg').textContent = `通過 ${inc.passed ?? 0}/${inc.total_tested ?? 0} · ${passRate} · ${elapsed}`;
+                    const pr = inc.pass_rate_avg != null ? (inc.pass_rate_avg * 100).toFixed(0) + '%' : '';
+                    $id('heroPoolProg').textContent = `通過 ${inc.passed ?? 0}/${inc.total_tested ?? 0} · ${pr}`;
                 } else {
                     $id('heroPoolProg').textContent = `等待首次探活`;
                 }
                 $id('heroPool').classList.remove('ok','warn','err');
-                $id('heroPool').classList.add(d.service_running ? 'ok' : 'err');
+                $id('heroPool').classList.add('ok');
 
                 // 評分庫
                 const sdb = d.sources_db || {};
