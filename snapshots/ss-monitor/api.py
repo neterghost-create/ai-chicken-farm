@@ -225,7 +225,7 @@ def get_cn_proxy_stats():
     if not os.path.exists(CN_PROXY_SOURCES_DB):
         return None
     try:
-        db = sq.connect(f"file:{CN_PROXY_SOURCES_DB}?mode=ro", uri=True)
+        db = sqlite3.connect(f"file:{CN_PROXY_SOURCES_DB}?mode=ro", uri=True)
         rows = db.execute(
             "SELECT name, protocol, last_status, last_proxy_count, last_checked_at "
             "FROM cn_proxy_sources WHERE enabled = 1 ORDER BY last_status DESC, last_proxy_count DESC"
