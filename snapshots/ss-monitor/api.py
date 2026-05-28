@@ -487,7 +487,7 @@ def get_quality():
                     'state': r[13] if has_state else 'testing',
                 } for r in top
             ],
-            'blacklist': [
+            'low_quality_nodes': [
                 {
                     'sig': r[0],
                     'state': r[1],   # v3.0: state 名 (recovering 等)
@@ -508,7 +508,7 @@ def get_quality():
 
 @app.route('/api/free-pool/sources')
 def get_sources():
-    """订阅源质量评分 (节点平均分 + 拉黑状态).
+    """订阅源质量评分 (节点平均分 + v3.0 状态).
 
     返回 sources 表里全部源 (默认 184), 用 data_maturity 字段标记数据成熟度:
       - 'scored':  source_quality_history 有记录 (最完整, 当轮真实贡献节点)
