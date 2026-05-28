@@ -270,13 +270,6 @@
         .badge.warn { background: rgba(251,191,36,0.12); color: var(--warn); border-color: rgba(251,191,36,0.3); }
         .badge.err { background: rgba(244,63,94,0.12); color: var(--err); border-color: rgba(244,63,94,0.3); }
         .badge.neutral { background: rgba(100,116,139,0.18); color: var(--text-2); border-color: rgba(100,116,139,0.3); }
-        .badge.violet { background: rgba(99,102,241,0.15); color: #a5b4fc; border-color: rgba(99,102,241,0.3); }
-        .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-        .badge.live .dot { animation: pulse 1.6s ease-in-out infinite; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
-            50%   { opacity: 0.5; box-shadow: 0 0 0 4px transparent; }
-        }
 
         /* === Chip (協議小標籤) === */
         .chips { display: flex; flex-wrap: wrap; gap: 6px; }
