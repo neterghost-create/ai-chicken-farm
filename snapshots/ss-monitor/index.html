@@ -156,7 +156,7 @@
             </div>
 
             <div class="section-title" style="margin-top:18px;">📈 輪次趨勢 (最近 20 輪)</div>
-            <div class="history-list" id="historyList"><div class="loading">加載中...</div></div>
+            <div class="history-list" id="historyList" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
 
             <div class="section-title" style="margin-top:18px;">🔄 上輪 vs 這輪 Diff</div>
             <div class="diff-grid">
@@ -224,10 +224,10 @@
             </div>
 
             <div class="section-title" style="margin-top:18px;">🌱 最近 7 天新增源</div>
-            <div class="src-list" id="discoverRecentAdded"><div class="loading">加載中...</div></div>
+            <div class="src-list" id="discoverRecentAdded" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
 
             <div class="section-title" style="margin-top:18px;">🛡️ 審計事件 (最近 20 條)</div>
-            <div class="src-list" id="discoverAuditList"><div class="loading">加載中...</div></div>
+            <div class="src-list" id="discoverAuditList" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
 
             <div class="section-title" style="margin-top:18px;">📋 發現隊列詳情</div>
             <div class="table-wrap"><div class="table-scroll" style="max-height:250px;">
@@ -277,7 +277,7 @@
             </div>
 
             <div class="section-title" style="margin-top:18px;">📊 評分分佈</div>
-            <div id="qBands"><div class="loading">加載中...</div></div>
+            <div id="qBands" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
 
             <div class="section-title" style="margin-top:18px;">🥇 TOP 30 極品節點</div>
             <div class="table-wrap"><div class="table-scroll" style="max-height:250px;">
@@ -300,11 +300,11 @@
             </div></div>
 
             <div class="section-title" style="margin-top:18px;">⛔ 黑名單 (節點級, 自動 48h 解封)</div>
-            <div id="qBlacklistList"><div class="loading">加載中...</div></div>
+            <div id="qBlacklistList" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
 
             <div class="section-title" style="margin-top:18px;">🛜 CN 代理探活</div>
             <div id="qCnProxyStats" class="stat-grid" style="margin-bottom:10px;"></div>
-            <div id="qCnProxySources"><div class="loading">加載中...</div></div>
+            <div id="qCnProxySources" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
         
             </div>
         </div>
@@ -353,9 +353,9 @@
 
             <div style="margin-top:14px;">
                 <div style="font-size:12px; color:var(--text-2); margin-bottom:8px;">🌟 TOP 5 候選源 (按評分庫通過率)</div>
-                <div class="src-list" id="dbTopSources"><div class="loading">加載中...</div></div>
+                <div class="src-list" id="dbTopSources" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
                 <div style="font-size:12px; color:var(--text-2); margin:14px 0 8px;">⛔ 黑名單源 (按解封時間)</div>
-                <div class="src-list" id="dbBlacklisted"><div class="loading">加載中...</div></div>
+                <div class="src-list" id="dbBlacklisted" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
             </div>
 
             <div class="section-title" style="margin-top:18px;">📊 大輪進度 (6h)</div>
@@ -374,7 +374,7 @@
             </div>
 
             <div class="section-title" style="margin-top:18px;">📈 大輪趨勢 (6h)</div>
-            <div class="history-list" id="srcRoundHistory"><div class="loading">加載中...</div></div>
+            <div class="history-list" id="srcRoundHistory" style="max-height:250px; overflow-y:auto;"><div class="loading">加載中...</div></div>
 
             <div class="section-title" style="margin-top:18px;">📋 源級評分明細</div>
             <div class="toolbar">
@@ -394,7 +394,7 @@
                 </select>
                 <span class="meta" id="srcCount">—</span>
             </div>
-            <div class="table-wrap"><div class="table-scroll">
+            <div class="table-wrap"><div class="table-scroll" style="max-height:250px;">
                 <table class="data" id="srcTable">
                     <thead>
                         <tr>
@@ -437,7 +437,7 @@
             </div>
 
             <div class="section-title" style="margin-top:18px;">🔗 當前連接</div>
-            <div class="table-wrap" style="padding: 12px;" id="connectionListWrap">
+            <div class="table-wrap" style="padding: 12px; max-height:250px; overflow-y:auto;" id="connectionListWrap">
                 <div id="connectionList"><div class="loading">加載中...</div></div>
             </div>
         </div>
