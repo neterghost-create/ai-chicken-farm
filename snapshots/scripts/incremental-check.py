@@ -480,6 +480,38 @@ def _main(lock_fh):
     db.close()
 
     elapsed = time.time() - start_time
+    total_tested = n_pass + n_fail + n_skip
+    pass_rate_avg = round(n_pass / (n_pass + n_fail), 3) if (n_pass + n_fail) > 0 else 0.0
+
+    # ===== Write incremental-history.json =====
+    _INC_HISTORY_PATH = "/opt/ss-monitor/sub/free/incremental-history.json"
+    try:
+        entry = {
+            "timestamp": started,
+            "total_tested": len(targets),
+            "passed": n_pass,
+            "failed": n_fail,
+            "pass_rate_avg": pass_rate_avg,
+            "decaying": n_decaying,
+            "recovering": n_recovering,
+            "cn_proxies_used": len(cn_proxies) if use_proxy else 0,
+            "elapsed_sec": round(elapsed, 1),
+        }
+        # Read existing, append, trim to 50
+        data = {"history": []}
+        if os.path.exists(_INC_HISTORY_PATH):
+            try:
+                with open(_INC_HISTORY_PATH) as f:
+                    data = json.load(f)
+            except Exception:
+                pass
+        data["history"].append(entry)
+        data["history"] = data["history"][-50:]
+        with open(_INC_HISTORY_PATH, "w") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"  ⚠️  写入 incremental-history.json 失败: {e}")
+
     print(f"  完成: 通过 {n_pass}, 失败 {n_fail}, 跳过 {n_skip}, "
           f"→ decaying {n_decaying}, → recovering {n_recovering}, 耗时 {elapsed:.1f}s")
     if fail_reasons:

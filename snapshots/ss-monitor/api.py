@@ -376,6 +376,12 @@ def get_history():
     return _serve_json_conditional("/opt/ss-monitor/sub/free/history.json")
 
 
+@app.route('/api/free-pool/incremental-history')
+def get_incremental_history():
+    """最近 20 轮增量探活趋势 - 带 ETag"""
+    return _serve_json_conditional("/opt/ss-monitor/sub/free/incremental-history.json")
+
+
 @app.route('/api/free-pool/quality')
 def get_quality():
     """节点级评分 TOP 排行 (从 history.db nodes_history 表) — v3.0 三态机"""

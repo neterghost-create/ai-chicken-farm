@@ -28,7 +28,7 @@
                 'pool.section.progress': '📊 當前一輪進度',
                 'pool.section.stats': '🌐 節點池統計 (上一輪)',
                 'pool.section.db': '📚 訂閱源評分庫',
-                'pool.section.history': '📈 輪次趨勢 (最近 20 輪)',
+                'pool.section.history': '📈 探活趨勢 (最近 20 輪)',
                 'pool.section.diff': '🔄 上輪 vs 這輪 Diff',
                 'pool.section.nodeTable': '📋 當前輪節點表',
                 'pool.tested': '測活', 'pool.alive': '存活', 'pool.media': '媒體通過', 'pool.speed': '測速 ≥512KB/s',
@@ -115,6 +115,7 @@
                 'src.col.nodeCount': '節點', 'src.col.lowStreak': '低分',
                 'src.col.maturity': '成熟度', 'src.col.status': '狀態',
                 'src.col.trend': '趨勢',
+                'src.section.roundHistory': '📈 大輪趨勢 (6h)',
             },
             'zh-Hans': {
                 'header.live': '咯咯',
@@ -134,7 +135,7 @@
                 'pool.section.progress': '📊 当前一轮进度',
                 'pool.section.stats': '🌐 节点池统计 (上一轮)',
                 'pool.section.db': '📚 订阅源评分库',
-                'pool.section.history': '📈 轮次趋势 (最近 20 轮)',
+                'pool.section.history': '📈 探活趋势 (最近 20 轮)',
                 'pool.section.diff': '🔄 上轮 vs 这轮 Diff',
                 'pool.section.nodeTable': '📋 当前轮节点表',
                 'pool.tested': '测活', 'pool.alive': '存活', 'pool.media': '媒体通过', 'pool.speed': '测速 ≥512KB/s',
@@ -214,6 +215,7 @@
                 'src.col.nodeCount': '节点', 'src.col.lowStreak': '低分',
                 'src.col.maturity': '成熟度', 'src.col.status': '状态',
                 'src.col.trend': '趋势',
+                'src.section.roundHistory': '📈 大轮趋势 (6h)',
             },
             'en': {
                 'header.live': 'LIVE',
@@ -233,7 +235,7 @@
                 'pool.section.progress': '📊 Current Round Progress',
                 'pool.section.stats': '🌐 Node Pool Stats (Last Round)',
                 'pool.section.db': '📚 Source Score DB',
-                'pool.section.history': '📈 Round Trend (Last 20)',
+                'pool.section.history': '📈 Probe Trend (Last 20)',
                 'pool.section.diff': '🔄 Last Round vs This Round Diff',
                 'pool.section.nodeTable': '📋 Current Round Nodes',
                 'pool.tested': 'Tested', 'pool.alive': 'Alive', 'pool.media': 'Media OK', 'pool.speed': 'Speed ≥512KB/s',
@@ -312,6 +314,7 @@
                 'src.col.nodeCount': 'Nodes', 'src.col.lowStreak': 'Low Streak',
                 'src.col.maturity': 'Maturity', 'src.col.status': 'Status',
                 'src.col.trend': 'Trend',
+                'src.section.roundHistory': '📈 Round Trend (6h)',
             },
         };
 
@@ -861,39 +864,41 @@
                 const [nr, dr, hr] = await Promise.all([
                     fetchCached('/api/free-pool/nodes'),
                     fetchCached('/api/free-pool/diff'),
-                    fetchCached('/api/free-pool/history'),
+                    fetchCached('/api/free-pool/incremental-history'),
                 ]);
 
                 $id('diffAdded').textContent = '↑+' + (dr.added_count ?? 0);
                 $id('diffRemoved').textContent = '↓-' + (dr.removed_count ?? 0);
                 $id('diffKept').textContent = dr.kept_count ?? 0;
 
-                // 歷史趨勢 (含 mini bar)
+                // 增量探活趨勢 (含 pass/fail bar)
                 const hl = $id('historyList');
                 if (hr.history && hr.history.length > 0) {
-                    const maxNodes = Math.max(...hr.history.map(h => h.total_nodes), 1);
                     hl.innerHTML = hr.history.slice().map(h => {
                         const dt = new Date(h.timestamp);
-                        const delta = h.diff.added - h.diff.removed;
-                        const arrow = delta > 0 ? '↑' : (delta < 0 ? '↓' : '·');
-                        const sign = delta > 0 ? '+' : '';   // 負號自帶, 正號要加, 0 不要符號
-                        const color = delta > 0 ? 'var(--good)' : (delta < 0 ? 'var(--err)' : 'var(--text-3)');
-                        const barW = (h.total_nodes / maxNodes * 100).toFixed(0);
-                        const protos = Object.entries(h.protocols || {})
-                            .sort((a,b) => b[1] - a[1])
-                            .slice(0, 8)
-                            .map(([k, v]) => `<span class="chip ${k}" style="font-size:10px; padding:1px 6px;">${k}<span class="chip-num">${v}</span></span>`).join('');
+                        const total = h.total_tested || 0;
+                        const passed = h.passed || 0;
+                        const failed = h.failed || 0;
+                        const passW = total > 0 ? (passed / total * 100).toFixed(0) : 0;
+                        const failW = total > 0 ? (failed / total * 100).toFixed(0) : 0;
+                        const prPct = (h.pass_rate_avg * 100).toFixed(0);
+                        const prColor = h.pass_rate_avg >= 0.7 ? 'var(--good)' : h.pass_rate_avg >= 0.4 ? 'var(--warn)' : 'var(--err)';
+                        const meta = [];
+                        if (h.cn_proxies_used) meta.push(`CN×${h.cn_proxies_used}`);
+                        if (h.decaying) meta.push(`<span style="color:var(--good);">▼${h.decaying}</span>`);
+                        if (h.recovering) meta.push(`<span style="color:var(--err);">▲${h.recovering}</span>`);
+                        meta.push(`${h.elapsed_sec || 0}s`);
                         return `<div class="history-item">
-                            <span class="round-id">#${h.round_id}</span>
+                            <span class="round-id" style="color:${prColor};">${prPct}%</span>
                             <div>
                                 <span class="round-time">${dt.toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})}</span>
-                                <div style="margin-top:3px; background:rgba(0,0,0,0.3); border-radius:3px; height:4px; overflow:hidden;">
-                                    <div style="width:${barW}%; height:100%; background:linear-gradient(90deg, var(--sky-500), var(--cyan-400)); box-shadow:0 0 4px rgba(56,189,248,0.4);"></div>
+                                <div style="margin-top:3px; display:flex; background:rgba(0,0,0,0.3); border-radius:3px; height:6px; overflow:hidden;">
+                                    <div style="width:${passW}%; height:100%; background:var(--good);"></div>
+                                    <div style="width:${failW}%; height:100%; background:var(--err);"></div>
                                 </div>
                             </div>
-                            <span class="round-nodes">${h.total_nodes}</span>
-                            <span class="round-delta" style="color:${color};">${arrow}${sign}${delta}</span>
-                            <div class="protos">${protos}</div>
+                            <span class="round-nodes">${passed}/${total}</span>
+                            <span style="color:var(--text-3); font-size:11px;">${meta.join(' · ')}</span>
                         </div>`;
                     }).join('');
                 } else {
@@ -1296,6 +1301,46 @@
         $id('srcSort').addEventListener('change', renderSourceTable);
         $id('srcMaturityFilter').addEventListener('change', renderSourceTable);
 
+        // ===== 6h 大輪趨勢 (飼料廠卡) =====
+        async function loadRoundHistory() {
+            const el = $id('srcRoundHistory');
+            if (!el) return;
+            try {
+                const hr = await fetchCached('/api/free-pool/history');
+                if (hr.history && hr.history.length > 0) {
+                    const maxNodes = Math.max(...hr.history.map(h => h.total_nodes), 1);
+                    el.innerHTML = hr.history.slice().map(h => {
+                        const dt = new Date(h.timestamp);
+                        const delta = h.diff.added - h.diff.removed;
+                        const arrow = delta > 0 ? '↑' : (delta < 0 ? '↓' : '·');
+                        const sign = delta > 0 ? '+' : '';
+                        const color = delta > 0 ? 'var(--good)' : (delta < 0 ? 'var(--err)' : 'var(--text-3)');
+                        const barW = (h.total_nodes / maxNodes * 100).toFixed(0);
+                        const protos = Object.entries(h.protocols || {})
+                            .sort((a,b) => b[1] - a[1])
+                            .slice(0, 8)
+                            .map(([k, v]) => `<span class="chip ${k}" style="font-size:10px; padding:1px 6px;">${k}<span class="chip-num">${v}</span></span>`).join('');
+                        return `<div class="history-item">
+                            <span class="round-id">#${h.round_id}</span>
+                            <div>
+                                <span class="round-time">${dt.toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})}</span>
+                                <div style="margin-top:3px; background:rgba(0,0,0,0.3); border-radius:3px; height:4px; overflow:hidden;">
+                                    <div style="width:${barW}%; height:100%; background:linear-gradient(90deg, var(--sky-500), var(--cyan-400)); box-shadow:0 0 4px rgba(56,189,248,0.4);"></div>
+                                </div>
+                            </div>
+                            <span class="round-nodes">${h.total_nodes}</span>
+                            <span class="round-delta" style="color:${color};">${arrow}${sign}${delta}</span>
+                            <div class="protos">${protos}</div>
+                        </div>`;
+                    }).join('');
+                } else {
+                    el.innerHTML = '<div class="empty">暫無歷史數據</div>';
+                }
+            } catch (e) {
+                dbg.warn('loadRoundHistory failed', e);
+            }
+        }
+
         // ===== loadDiscover - discover-airports 卡片 =====
         async function loadDiscover() {
             try {
@@ -1448,7 +1493,7 @@
             try {
                 await Promise.allSettled([
                     loadData(), loadVPS(), loadFreePool(),
-                    loadNodesAndDiff(), loadQuality(), loadSources(), loadDiscover()
+                    loadNodesAndDiff(), loadQuality(), loadSources(), loadRoundHistory(), loadDiscover()
                 ]);
             } finally {
                 if (btn) { btn.style.pointerEvents = ''; btn.style.opacity = ''; }
@@ -1462,6 +1507,7 @@
         loadNodesAndDiff();
         loadQuality();
         loadSources();
+        loadRoundHistory();
         loadDiscover();
 
         // 定時刷新 · 頁面隱藏時暫停輪詢 (visibility API)
@@ -1475,6 +1521,7 @@
             _intervals.push(setInterval(loadNodesAndDiff, 60000)); // 節點/diff/趨勢 60s
             _intervals.push(setInterval(loadQuality, 90000));      // 節點級評分 90s
             _intervals.push(setInterval(loadSources, 90000));      // 源級評分 90s
+            _intervals.push(setInterval(loadRoundHistory, 60000));  // 大輪趨勢 60s
             _intervals.push(setInterval(loadDiscover, 120000));    // 自動發現 120s (低頻)
         }
         function _clearAll() {
