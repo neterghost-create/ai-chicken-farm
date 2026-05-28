@@ -1104,30 +1104,38 @@
                             <div class="stat-tile"><div class="label">${t('quality.cnProxy.lastDiscovery')}</div><div class="value"><span style="font-size:13px;font-weight:500;">${lastDisc}</span></div></div>
                         `;
                     }
-                    // 源列表
+                    // 源列表 (5行三段式)
                     if (cnSrcEl) {
                         const sources = cnProxy.sources || [];
                         if (sources.length === 0) {
                             cnSrcEl.innerHTML = '<div class="empty">無代理源</div>';
                         } else {
-                            cnSrcEl.innerHTML = sources.map(src => {
-                                const statusColor = src.status === 'ok' ? 'var(--good)' : src.status === 'fail' ? 'var(--err)' : 'var(--warn)';
-                                const statusIcon = src.status === 'ok' ? '✓' : src.status === 'fail' ? '✗' : '?';
-                                const checked = src.last_checked
-                                    ? new Date(src.last_checked).toLocaleString(__lang === 'en' ? 'en-US' : 'zh-TW')
-                                    : '—';
-                                return `<div class="kv-row">
-                                    <div class="k" style="display:flex;align-items:center;gap:6px;min-width:0;">
-                                        <span style="color:${statusColor};font-weight:600;">${statusIcon}</span>
-                                        <span class="chip ${src.protocol}">${src.protocol}</span>
-                                        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(src.name)}</span>
-                                    </div>
-                                    <div class="v">
-                                        <span style="color:var(--text-2);">${src.proxy_count}</span>
-                                        <span style="color:var(--text-3);font-size:11px;">${checked}</span>
-                                    </div>
-                                </div>`;
-                            }).join('');
+                            function _renderCnProxyList() {
+                                const lim = computeLimit(_cnSrcStage, sources.length, 0);
+                                const visible = sources.slice(0, lim.take);
+                                const rows = visible.map(src => {
+                                    const statusColor = src.status === 'ok' ? 'var(--good)' : src.status === 'fail' ? 'var(--err)' : 'var(--warn)';
+                                    const statusIcon = src.status === 'ok' ? '✓' : src.status === 'fail' ? '✗' : '?';
+                                    const checked = src.last_checked
+                                        ? new Date(src.last_checked).toLocaleString(__lang === 'en' ? 'en-US' : 'zh-TW')
+                                        : '—';
+                                    return `<div class="kv-row">
+                                        <div class="k" style="display:flex;align-items:center;gap:6px;min-width:0;">
+                                            <span style="color:${statusColor};font-weight:600;">${statusIcon}</span>
+                                            <span class="chip ${src.protocol}">${src.protocol}</span>
+                                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(src.name)}</span>
+                                        </div>
+                                        <div class="v">
+                                            <span style="color:var(--text-2);">${src.proxy_count}</span>
+                                            <span style="color:var(--text-3);font-size:11px;">${checked}</span>
+                                        </div>
+                                    </div>`;
+                                }).join('');
+                                const limitHtml = _buildLimitLinks('cnSrc', sources.length, lim.take, lim, _renderCnProxyList);
+                                cnSrcEl.innerHTML = rows + (limitHtml ? `<div style="text-align:center;color:var(--text-3);font-size:12px;padding:8px 0;">${limitHtml}</div>` : '');
+                            }
+                            let _cnSrcStage = 0;
+                            _renderCnProxyList();
                         }
                     }
                 }
