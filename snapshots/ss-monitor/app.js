@@ -857,11 +857,11 @@
                 const topEl = $id('dbTopSources');
                 if (sdb.top_sources && sdb.top_sources.length > 0) {
                     topEl.innerHTML = sdb.top_sources.map(s => {
-                        const shortUrl = s.url.length > 80 ? s.url.slice(0, 80) + '…' : s.url;
+                        const su = smartUrl(s.url);
                         return `<div class="src-row">
                             <span class="score">${(s.score || 0).toFixed(1)}</span>
                             <span class="pass">${s.passes}/${s.checks}</span>
-                            <a href="${safeUrl(s.url)}" target="_blank" rel="noopener" title="${esc(s.url)}">${esc(shortUrl)}</a>
+                            <a href="${safeUrl(s.url)}" target="_blank" rel="noopener" title="${esc(su.full)}">${esc(su.text)}</a>
                         </div>`;
                     }).join('');
                 } else {
@@ -872,11 +872,11 @@
                 if (sdb.blacklisted && sdb.blacklisted.length > 0) {
                     blEl.innerHTML = sdb.blacklisted.map(b => {
                         const until = b.until ? new Date(b.until).toLocaleString('zh-CN') : '—';
-                        const shortUrl = b.url.length > 80 ? b.url.slice(0, 80) + '…' : b.url;
+                        const su = smartUrl(b.url);
                         return `<div class="src-row bl">
                             <span class="score">⛔</span>
                             <span class="pass">${until}</span>
-                            <a href="${b.url}" target="_blank" rel="noopener" title="${b.url}">${shortUrl}</a>
+                            <a href="${b.url}" target="_blank" rel="noopener" title="${esc(su.full)}">${esc(su.text)}</a>
                         </div>`;
                     }).join('');
                 } else {
@@ -1315,10 +1315,10 @@
                     ? `<span class="badge ok">${t('status.whitelisted')}</span>`
                     : `<span class="badge neutral">${t('status.candidate')}</span>`;
 
-                const shortUrl = s.url.length > 70 ? s.url.slice(0, 70) + '…' : s.url;
+                const su = smartUrl(s.url);
                 return `<tr>
-                    <td class="name-cell" style="max-width:340px;" title="${esc(s.url)}">
-                        <a href="${safeUrl(s.url)}" target="_blank" rel="noopener">${esc(shortUrl)}</a>
+                    <td class="name-cell" style="max-width:340px;" title="${esc(su.full)}">
+                        <a href="${safeUrl(s.url)}" target="_blank" rel="noopener">${esc(su.text)}</a>
                     </td>
                     <td>${scoreCell}</td>
                     <td class="col-hide-sm" style="color:var(--text-2);">${s.latest_node_count ?? '—'}</td>
@@ -1466,12 +1466,12 @@
                         const limitInfo = computeLimit(stage, items.length, 20);
                         const { take } = limitInfo;
                         addedEl.innerHTML = items.slice(0, take).map(s => {
-                            const shortUrl = s.url.length > 80 ? s.url.slice(0, 80) + '…' : s.url;
+                            const su = smartUrl(s.url);
                             const fs = s.first_seen ? new Date(s.first_seen).toLocaleDateString('zh-Hant') : '—';
-                            return `<div class="src-row" title="${esc(s.url)}">
+                            return `<div class="src-row" title="${esc(su.full)}">
                                 <span class="score">${(s.score ?? 100).toFixed(0)}</span>
                                 <span class="pass" style="color:var(--text-3);">${fs}</span>
-                                <span style="color:var(--text-2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(shortUrl)}</span>
+                                <span style="color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(su.text)}</span>
                             </div>`;
                         }).join('') + renderLimitDiv('discoverRecentAdded', items.length, take, limitInfo, () => loadDiscover());
                     }
@@ -1490,13 +1490,13 @@
                         const limitInfo = computeLimit(stage, items.length, 20);
                         const { take } = limitInfo;
                         auditEl.innerHTML = items.slice(0, take).map(a => {
-                            const shortUrl = a.source_url.length > 50 ? a.source_url.slice(0, 50) + '…' : a.source_url;
+                            const su = smartUrl(a.source_url);
                             const at = a.audited_at ? new Date(a.audited_at).toLocaleString('zh-Hant', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
                             const finding = a.finding && a.finding !== 'audit_pass' ? a.finding : (a.severity === 'info' ? '通過' : a.finding || a.severity);
-                            return `<div class="src-row audit-row" title="${esc(a.source_url)}\n${esc(a.finding || '')}">
+                            return `<div class="src-row audit-row" title="${esc(su.full)}\n${esc(a.finding || '')}">
                                 <span class="score" style="color:${sevColor(a.severity)}; font-weight:700;">${sevIcon(a.severity)}</span>
                                 <span class="pass" style="color:var(--text-3);">${at}</span>
-                                <span style="color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(shortUrl)}</span>
+                                <span class="url-cell" style="color:var(--text-2);">${esc(su.text)}</span>
                                 <span class="pass" style="color:${sevColor(a.severity)};">${esc(finding)}</span>
                             </div>`;
                         }).join('') + renderLimitDiv('discoverAuditList', items.length, take, limitInfo, () => loadDiscover());
