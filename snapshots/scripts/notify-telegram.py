@@ -124,7 +124,8 @@ def main():
 • Clash/Mihomo (Provider): {sub_base}/all.yaml
 • Clash/Mihomo (完整 config): {sub_base}/all-config.yaml
 • v2rayN/v2rayNG: {sub_base}/v2ray.txt
-• Shadowrocket (base64): {sub_base}/base64.txt"""
+• Shadowrocket (base64): {sub_base}/base64.txt
+• CN 代理 (Clash/Mihomo): {sub_base}/cn.yaml"""
     else:
         sub_block = "⚠️  TOKEN 未配置, 订阅 URL 未生成"
 
