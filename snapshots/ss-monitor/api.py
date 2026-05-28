@@ -302,6 +302,22 @@ def get_free_pool():
     db = get_source_db_stats()
     progress = get_subs_check_progress()
 
+    # Latest incremental-check result (30min probe)
+    _inc = _read_json("/opt/ss-monitor/sub/free/incremental-history.json")
+    inc_latest = (_inc.get('history') or [None])[-1] if _inc else None
+
+    # State distribution from history.db (v3.0 三态机)
+    _HISTORY_DB = "/opt/subs-check/scripts/history.db"
+    state_dist = {}
+    if os.path.exists(_HISTORY_DB):
+        try:
+            _hdb = sqlite3.connect(_HISTORY_DB)
+            for s, c in _hdb.execute("SELECT state, COUNT(*) FROM nodes_history GROUP BY state"):
+                state_dist[(s or 'testing')] = c
+            _hdb.close()
+        except Exception:
+            pass
+
     return jsonify({
         'service_running': get_subs_check_status(),
         'service_uptime': get_subs_check_uptime(),
@@ -309,6 +325,8 @@ def get_free_pool():
         'pool': pool,           # 节点统计 (last_run, total_nodes, protocols)
         'sources_db': db,        # 订阅源评分库
         'progress': progress,    # 当前一轮进度
+        'incremental_check': inc_latest,   # 最新增量探活 (30min)
+        'state_distribution': state_dist,   # 节点状态分布 (testing/decaying/recovering)
         'token_protected': True,  # 提示订阅 URL 受保护
         'timestamp': datetime.now().isoformat()
     })

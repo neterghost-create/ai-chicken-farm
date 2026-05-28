@@ -121,7 +121,7 @@
         <div class="card collapsible" id="poolCard">
             <div class="card-head">
                 <div class="card-title violet"><div class="ico">🥚</div><span data-i18n="pool.title">蛋池</span></div>
-                <div class="card-meta" id="poolNextCheckMeta">下次檢查 <code id="poolNextCheck" style="color:var(--text-2);">—</code></div>
+                <div class="card-meta" id="poolNextCheckMeta"><span data-i18n="pool.lastRun">上次探活</span> <code id="poolNextCheck" style="color:var(--text-2);">—</code></div>
             <span class="collapse-arrow" aria-hidden="true">▾</span>
             </div>
             <div class="card-body">
@@ -132,19 +132,24 @@
                 <div class="kv-row"><span class="k">記憶體佔用</span><span class="v" id="poolMemory">—</span></div>
             </div>
 
-            <div class="section-title">📊 當前一輪進度</div>
+            <div class="section-title" data-i18n="pool.section.progress">📊 增量探活 (30min)</div>
             <div class="stat-grid">
-                <div class="stat-tile"><div class="label">測活 <span class="badge" id="poolPipelineStatus" style="margin-left:6px; font-size:11px; padding:1px 6px;">—</span></div><div class="value" id="poolTested" style="font-size:16px;">—</div></div>
-                <div class="stat-tile"><div class="label">存活</div><div class="value" id="poolAlive" style="color:var(--good);">—</div></div>
-                <div class="stat-tile"><div class="label">媒體通過</div><div class="value" id="poolMediaPass" style="color:var(--cyan-400);">—</div></div>
-                <div class="stat-tile"><div class="label">測速 ≥512KB/s</div><div class="value" id="poolSpeedPass" style="color:var(--good);">—</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="pool.tested">測試</div><div class="value" id="poolTested" style="font-size:16px;">—</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="pool.alive">通過</div><div class="value" id="poolAlive" style="color:var(--good);">—</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="pool.media">失敗</div><div class="value" id="poolMediaPass" style="color:var(--err);">—</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="pool.speed">通過率</div><div class="value" id="poolSpeedPass">—</div></div>
+            </div>
+            <div class="stat-grid" style="margin-top:8px;">
+                <div class="stat-tile"><div class="label" data-i18n="pool.cnProxies">CN 代理</div><div class="value" id="poolCnProxies" style="font-size:14px;">—</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="pool.elapsed">耗時</div><div class="value" id="poolElapsed" style="font-size:14px;">—</div></div>
+                <div class="stat-tile" style="grid-column:span 2;"><div class="label" data-i18n="pool.lastRun">上次探活</div><div class="value" id="poolLastProbe" style="font-size:13px;">—</div></div>
             </div>
 
-            <div class="section-title">🌐 節點池統計 (上一輪)</div>
+            <div class="section-title" data-i18n="pool.section.stats">🌐 狀態分布</div>
             <div class="stat-grid">
-                <div class="stat-tile"><div class="label">可用節點</div><div class="value" id="poolTotalNodes" style="color:var(--good);">—</div></div>
-                <div class="stat-tile" style="grid-column: span 2;"><div class="label">協議分佈</div><div class="chips" id="poolProtocols" style="margin-top:8px;"><span class="loading" style="padding:0;">加載中...</span></div></div>
-                <div class="stat-tile"><div class="label">上輪跑完</div><div class="value" id="poolLastRun" style="font-size:13px;">—</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="pool.totalNodes">測試節點</div><div class="value" id="poolTotalNodes" style="color:var(--good);">—</div></div>
+                <div class="stat-tile" style="grid-column: span 2;"><div class="label" data-i18n="pool.protocols">狀態分布</div><div class="chips" id="poolProtocols" style="margin-top:8px;"><span class="loading" style="padding:0;">加載中...</span></div></div>
+                <div class="stat-tile"><div class="label" data-i18n="pool.stateDecaying">▼ decaying</div><div class="value" id="poolDecaying" style="color:var(--good); font-size:14px;">—</div></div>
             </div>
 
             <div class="section-title">📈 輪次趨勢 (最近 20 輪)</div>
@@ -348,6 +353,21 @@
                 <div class="src-list" id="dbTopSources"><div class="loading">加載中...</div></div>
                 <div style="font-size:12px; color:var(--text-2); margin:14px 0 8px;">⛔ 黑名單源 (按解封時間)</div>
                 <div class="src-list" id="dbBlacklisted"><div class="loading">加載中...</div></div>
+            </div>
+
+            <div class="section-title" data-i18n="src.section.progress">📊 大輪進度 (6h)</div>
+            <div class="stat-grid">
+                <div class="stat-tile"><div class="label" data-i18n="src.round.tested">測活</div><div class="value" id="srcRoundTested" style="font-size:16px;">—</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="src.round.alive">存活</div><div class="value" id="srcRoundAlive" style="color:var(--good);">—</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="src.round.media">媒體通過</div><div class="value" id="srcRoundMedia" style="color:var(--cyan-400);">—</div></div>
+                <div class="stat-tile"><div class="label" data-i18n="src.round.speed">測速通過</div><div class="value" id="srcRoundSpeed" style="color:var(--good);">—</div></div>
+            </div>
+
+            <div class="section-title" data-i18n="src.section.poolStats">🌐 大輪統計</div>
+            <div class="stat-grid">
+                <div class="stat-tile"><div class="label" data-i18n="src.round.totalNodes">可用節點</div><div class="value" id="srcRoundTotalNodes" style="color:var(--good);">—</div></div>
+                <div class="stat-tile" style="grid-column: span 2;"><div class="label" data-i18n="src.round.protocols">協議分布</div><div class="chips" id="srcRoundProtocols" style="margin-top:8px;"><span class="loading" style="padding:0;">加載中...</span></div></div>
+                <div class="stat-tile"><div class="label" data-i18n="src.round.lastRun">上輪跑完</div><div class="value" id="srcRoundLastRun" style="font-size:13px;">—</div></div>
             </div>
 
             <div class="section-title" data-i18n="src.section.roundHistory">📈 大輪趨勢 (6h)</div>
