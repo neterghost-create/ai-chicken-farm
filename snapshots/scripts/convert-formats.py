@@ -1184,21 +1184,6 @@ def main(force=False):
 
     print(f"  ✓ 写入 nodes.json / diff.json / history.json / stats.json")
 
-    # ===== 新轮次入库后, 立即触发 Telegram 推送 (避免 cron 等待) =====
-    if is_new_round:
-        try:
-            import subprocess
-            r = subprocess.run(
-                ['/opt/subs-check/scripts/notify-telegram.py'],
-                capture_output=True, timeout=30, text=True
-            )
-            if r.returncode == 0:
-                print(f"  ✓ 级联触发 Telegram 推送: {r.stdout.strip()}")
-            else:
-                print(f"  ⚠️  Telegram 推送非零返回: {r.returncode}, stderr={r.stderr.strip()[:200]}")
-        except Exception as e:
-            print(f"  ⚠️  Telegram 推送异常 (会被下一次 cron 兜底): {e}")
-
     return 0
 
 

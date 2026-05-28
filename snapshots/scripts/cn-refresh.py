@@ -308,34 +308,26 @@ def main():
     # 4. 拼 token URL
     sub_url = f"https://{domain}/sub/free/{fp_token}/cn.yaml"
 
-    # 5. 统计协议分布
+    # 5. 统计协议分布 (写入 stdout 供 notify-telegram.py 读取)
     proto_dist = {}
     for p, _, _ in alive:
         proto_dist[p] = proto_dist.get(p, 0) + 1
     proto_str = " · ".join(f"{k}:{v}" for k, v in sorted(proto_dist.items(), key=lambda x: -x[1]))
 
-    # 6. Telegram 推送
-    tg_cfg = load_conf(TELEGRAM_CONF)
-    tg_token = tg_cfg.get('TELEGRAM_BOT_TOKEN', '')
-    tg_chat = tg_cfg.get('TELEGRAM_CHAT_ID', '')
+    # 6. 写入 cn-stats.json (供 notify-telegram.py 读取合并推送)
+    cn_stats = {
+        "alive": len(alive),
+        "total": len(proxies),
+        "proto_str": proto_str,
+        "sub_url": sub_url,
+        "timestamp": now.isoformat(),
+    }
+    cn_stats_path = "/opt/ss-monitor/sub/free/cn-stats.json"
+    with open(cn_stats_path, "w") as f:
+        json.dump(cn_stats, f, ensure_ascii=False)
 
-    text = f"""*🛜 CN 代理刷新*
-
-⏰ {now.strftime('%Y-%m-%d %H:%M:%S')}
-✅ 存活节点: *{len(alive)}*/{len(proxies)}
-📊 协议分布: {proto_str}
-
-📡 订阅 URL (Clash/Mihomo Provider):
-`{sub_url}`"""
-
-    if tg_token and tg_chat:
-        ok = send_telegram(tg_token, tg_chat, text)
-        print(f"{'✓' if ok else '✗'} Telegram 推送{'成功' if ok else '失败'}", file=sys.stderr)
-    else:
-        print("⚠️  Telegram 未配置", file=sys.stderr)
-
-    # stdout 也输出摘要
-    print(text.replace('*', '').replace('`', ''))
+    print(f"🛜 CN 代理: {len(alive)}/{len(proxies)} ({proto_str})")
+    print(f"📡 CN URL: {sub_url}")
 
 
 if __name__ == "__main__":

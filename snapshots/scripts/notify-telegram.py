@@ -129,12 +129,23 @@ def main():
     else:
         sub_block = "⚠️  TOKEN 未配置, 订阅 URL 未生成"
 
+    # 读 CN 代理统计 (cn-refresh.py 写入)
+    cn_block = ""
+    cn_stats_path = "/opt/ss-monitor/sub/free/cn-stats.json"
+    if os.path.exists(cn_stats_path):
+        try:
+            with open(cn_stats_path) as f:
+                cn = json.load(f)
+            cn_block = f"\n🛜 CN 代理: *{cn['alive']}*/{cn['total']} ({cn['proto_str']})"
+        except Exception:
+            pass
+
     text = f"""*🆓 免费节点池 #{rid}*
 
 ⏰ {dt_local.strftime('%Y-%m-%d %H:%M:%S')}
 ✅ 可用节点: *{tot}*  {delta_str}
 🔄 Diff: +{da} / -{dr} / ={dk}
-📊 协议: {proto_str}
+📊 协议: {proto_str}{cn_block}
 
 {sub_block}
 
