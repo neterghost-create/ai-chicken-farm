@@ -225,7 +225,7 @@ def get_cn_proxy_stats():
     if not os.path.exists(CN_PROXY_SOURCES_DB):
         return None
     try:
-        db = sqlite3.connect(CN_PROXY_SOURCES_DB)
+        db = sq.connect(f"file:{CN_PROXY_SOURCES_DB}?mode=ro", uri=True)
         rows = db.execute(
             "SELECT name, protocol, last_status, last_proxy_count, last_checked_at "
             "FROM cn_proxy_sources WHERE enabled = 1 ORDER BY last_status DESC, last_proxy_count DESC"
@@ -262,7 +262,7 @@ def get_source_db_stats():
     if not os.path.exists(SUBS_CHECK_DB):
         return None
     try:
-        db = sqlite3.connect(SUBS_CHECK_DB)
+        db = sqlite3.connect(f"file:{SUBS_CHECK_DB}?mode=ro", uri=True)
         rows = db.execute("SELECT status, COUNT(*) FROM sources GROUP BY status").fetchall()
         status_counts = {s: c for s, c in rows}
         # top 5 按分数
@@ -309,7 +309,7 @@ def get_free_pool():
     state_dist = {}
     if os.path.exists(_HISTORY_DB):
         try:
-            _hdb = sqlite3.connect(_HISTORY_DB)
+            _hdb = sqlite3.connect(f"file:{_HISTORY_DB}?mode=ro", uri=True)
             for s, c in _hdb.execute("SELECT state, COUNT(*) FROM nodes_history GROUP BY state"):
                 state_dist[(s or 'testing')] = c
             _hdb.close()
@@ -406,7 +406,7 @@ def get_quality():
     if not os.path.exists(HISTORY_DB):
         return jsonify({'error': 'history.db not found'}), 503
     try:
-        db = sq.connect(HISTORY_DB)
+        db = sq.connect(f"file:{HISTORY_DB}?mode=ro", uri=True)
         # 总览
         total = db.execute("SELECT COUNT(*) FROM nodes_history").fetchone()[0]
         # v3.0 状态分布
@@ -530,7 +530,7 @@ def get_sources():
     if not os.path.exists(SCORES_DB):
         return jsonify({'error': 'source-scores.db not found'}), 503
     try:
-        db = sq.connect(SCORES_DB)
+        db = sq.connect(f"file:{SCORES_DB}?mode=ro", uri=True)
         # 总览 (v3.0: 用 state 而非 status, 但兼容旧 status 字段)
         try:
             rows = db.execute(
@@ -945,7 +945,7 @@ def get_discover():
     if not os.path.exists(SCORES_DB):
         return jsonify({'error': 'source-scores.db not found'}), 503
     try:
-        db = sq.connect(SCORES_DB)
+        db = sq.connect(f"file:{SCORES_DB}?mode=ro", uri=True)
         # 队列状态
         queue = []
         for row in db.execute("""

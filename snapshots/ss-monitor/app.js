@@ -809,6 +809,7 @@
                 const sd = d.state_distribution || {};
                 const totalNodes = Object.values(sd).reduce((a, b) => a + b, 0);
                 $id('poolTotalNodes').textContent = totalNodes || '—';
+                $id('poolDecaying').textContent = sd.decaying ?? '—';
 
                 // 状态 chips (testing/decaying/recovering)
                 const protoEl = $id('poolProtocols');
