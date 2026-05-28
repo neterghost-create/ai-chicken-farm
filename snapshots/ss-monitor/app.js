@@ -116,6 +116,9 @@
                 'src.col.nodeCount': '節點', 'src.col.lowStreak': '低分',
                 'src.col.maturity': '成熟度', 'src.col.status': '狀態',
                 'src.col.trend': '趨勢',
+                'src.section.progress': '📊 大輪進度 (6h)', 'src.section.poolStats': '🌐 大輪統計',
+                'src.round.tested': '測活', 'src.round.alive': '存活', 'src.round.media': '媒體通過', 'src.round.speed': '測速通過',
+                'src.round.totalNodes': '可用節點', 'src.round.protocols': '協議分布', 'src.round.lastRun': '上輪跑完',
                 'src.section.roundHistory': '📈 大輪趨勢 (6h)',
                 'src.section.progress': '📊 大輪進度 (6h)',
                 'src.section.poolStats': '🌐 大輪統計',
@@ -223,6 +226,9 @@
                 'src.col.nodeCount': '节点', 'src.col.lowStreak': '低分',
                 'src.col.maturity': '成熟度', 'src.col.status': '状态',
                 'src.col.trend': '趋势',
+                'src.section.progress': '📊 大轮进度 (6h)', 'src.section.poolStats': '🌐 大轮统计',
+                'src.round.tested': '测活', 'src.round.alive': '存活', 'src.round.media': '媒体通过', 'src.round.speed': '测速通过',
+                'src.round.totalNodes': '可用节点', 'src.round.protocols': '协议分布', 'src.round.lastRun': '上轮跑完',
                 'src.section.roundHistory': '📈 大轮趋势 (6h)',
                 'src.section.progress': '📊 大轮进度 (6h)',
                 'src.section.poolStats': '🌐 大轮统计',
@@ -329,6 +335,9 @@
                 'src.col.nodeCount': 'Nodes', 'src.col.lowStreak': 'Low Streak',
                 'src.col.maturity': 'Maturity', 'src.col.status': 'Status',
                 'src.col.trend': 'Trend',
+                'src.section.progress': '📊 Round Progress (6h)', 'src.section.poolStats': '🌐 Round Stats',
+                'src.round.tested': 'Tested', 'src.round.alive': 'Alive', 'src.round.media': 'Media', 'src.round.speed': 'Speed',
+                'src.round.totalNodes': 'Nodes', 'src.round.protocols': 'Protocols', 'src.round.lastRun': 'Last Run',
                 'src.section.roundHistory': '📈 Round Trend (6h)',
                 'src.section.progress': '📊 Round Progress (6h)',
                 'src.section.poolStats': '🌐 Round Stats',
@@ -1319,8 +1328,29 @@
         // ===== 6h 大輪趨勢 (飼料廠卡) =====
         async function loadRoundHistory() {
             const el = $id('srcRoundHistory');
-            if (!el) return;
             try {
+                // 渲染 6h 大輪 stat tiles (從 /api/free-pool 的 progress + pool)
+                const d = await fetchCached('/api/free-pool');
+                const prog = d.progress || {};
+                const pool = d.pool || {};
+                const setOrDash = (id, val) => { const e = $id(id); if (e) e.textContent = val ?? '—'; };
+                setOrDash('srcRoundTested', prog.total ?? prog.tested ?? '—');
+                setOrDash('srcRoundAlive', prog.alive ?? '—');
+                setOrDash('srcRoundMedia', prog.media_pass ?? '—');
+                setOrDash('srcRoundSpeed', prog.speed_pass ?? '—');
+                setOrDash('srcRoundTotalNodes', pool.total_nodes ?? '—');
+                setOrDash('srcRoundLastRun', pool.last_run
+                    ? new Date(pool.last_run).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})
+                    : '—');
+                const protoEl = $id('srcRoundProtocols');
+                if (protoEl && pool.protocols) {
+                    protoEl.innerHTML = Object.entries(pool.protocols)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([k, v]) => `<span class="chip ${k}">${k}<span class="chip-num">${v}</span></span>`).join('');
+                }
+
+                // 渲染 6h 大輪趨勢圖
+                if (!el) return;
                 const hr = await fetchCached('/api/free-pool/history');
                 if (hr.history && hr.history.length > 0) {
                     const maxNodes = Math.max(...hr.history.map(h => h.total_nodes), 1);
