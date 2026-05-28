@@ -648,8 +648,8 @@
                         const m = c.match(/^(\S+)\s+\((\d+)\s+連接\)$/);
                         const ip = m ? m[1] : c, n = m ? m[2] : '';
                         return `<div style="display:flex; justify-content:space-between; padding:6px 8px; border-bottom:1px dashed var(--line); font-family:var(--font-mono); font-size:12px;">
-                            <span style="color:var(--sky-300);">${ip}</span>
-                            <span class="badge cyan">${n} 連接</span>
+                            <span style="color:var(--sky-300);">${esc(ip)}</span>
+                            <span class="badge cyan">${esc(n)} 連接</span>
                         </div>`;
                     }).join('');
                 } else {
@@ -979,8 +979,8 @@
                 return `<tr>
                     <td class="name-cell" title="${esc(n.name)}${n.sub_tag ? ' (' + esc(n.sub_tag) + ')' : ''}">${stateBadge} ${esc(n.name)}${subTag}</td>
                     <td><span class="score-pill ${scorePillClass(score)}">${score.toFixed(0)}</span></td>
-                    <td><span class="chip ${n.type}" style="font-size:10px;">${n.type}</span></td>
-                    <td class="col-hide-sm">${n.region || '—'}</td>
+                    <td><span class="chip ${esc(n.type)}" style="font-size:10px;">${esc(n.type)}</span></td>
+                    <td class="col-hide-sm">${esc(n.region || '—')}</td>
                     <td style="color:${speedColor}; font-weight:600;">${speedText}</td>
                     <td class="col-hide-sm" style="color:var(--text-3);">${n.appearances || 1}</td>
                     <td class="col-hide-sm" style="color:${consecHigh};">${n.consecutive || 1}</td>
