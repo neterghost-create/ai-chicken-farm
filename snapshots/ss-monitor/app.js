@@ -664,7 +664,7 @@
         // ===== 2. VPS 服務器狀態 =====
         async function loadVPS() {
             try {
-                const d = await fetch('/api/vps-status').then(r => r.json());
+                const d = await fetchCached('/api/vps-status');
 
                 // host info
                 $id('vpsHostname').textContent = d.host.hostname;
@@ -744,7 +744,7 @@
         // ===== 3. 免費節點池 =====
         async function loadFreePool() {
             try {
-                const d = await fetch('/api/free-pool').then(r => r.json());
+                const d = await fetchCached('/api/free-pool');
 
                 const ps = $id('poolServiceStatus');
                 if (d.service_running) {
