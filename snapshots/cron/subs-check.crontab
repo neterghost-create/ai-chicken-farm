@@ -1,0 +1,16 @@
+# subs-check: 每 30 分钟跑一轮 (convert-formats → incremental-check 串行)
+5,35 * * * * /opt/subs-check/scripts/pipeline-round.sh >> /var/log/subs-check-pipeline.log 2>&1
+# subs-check: 04:00 同步 lza6
+15 4 * * * /opt/subs-check/scripts/sync-lza6.py >> /var/log/subs-check-sync.log 2>&1
+# subs-check: Telegram 推送兜底
+0 */3 * * * /opt/subs-check/scripts/notify-telegram.py >> /var/log/subs-check-notify.log 2>&1
+# subs-check: 源-节点映射
+20 4,10,16,22 * * * /opt/subs-check/scripts/source-fetcher.py >> /var/log/subs-check-fetcher.log 2>&1
+# subs-check: 周期恢复
+0 3 * * 0 /opt/subs-check/scripts/weekly-recovery.py >> /var/log/subs-check-recovery.log 2>&1
+# subs-check: 清理
+33 4 * * * /opt/subs-check/scripts/source-quality-history-cleanup.py >> /var/log/subs-check-cleanup.log 2>&1
+# discover-airports: 每天 02:00
+0 2 * * * /opt/subs-check/scripts/discover-airports.py >> /var/log/subs-check-discover.log 2>&1
+# audit-cleanup: 周日 03:30
+30 3 * * 0 /opt/subs-check/scripts/audit-cleanup.py >> /var/log/subs-check-audit-cleanup.log 2>&1
