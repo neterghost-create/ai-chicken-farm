@@ -262,10 +262,21 @@ def main():
     token_dir = f"/opt/ss-monitor/sub/free/{fp_token}"
     output_yaml = os.path.join(token_dir, "cn.yaml")
 
-    # 1. 拉取
+    # 1. 拉取 (失败时自动触发 discover 补充新源)
     proxies = fetch_proxies()
     if not proxies:
-        print("❌ 无代理可输出", file=sys.stderr)
+        print("⚠️  无代理, 触发 discover-cn-proxies.py 补充新源...", file=sys.stderr)
+        try:
+            import subprocess
+            subprocess.run(
+                [sys.executable, "/opt/subs-check/scripts/discover-cn-proxies.py"],
+                capture_output=True, timeout=120, text=True
+            )
+        except Exception as e:
+            print(f"⚠️  discover 异常: {e}", file=sys.stderr)
+        proxies = fetch_proxies()
+    if not proxies:
+        print("❌ discover 后仍无代理, 跳过", file=sys.stderr)
         sys.exit(1)
 
     # 2. 验证

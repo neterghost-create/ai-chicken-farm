@@ -23,6 +23,7 @@ v3.0 → v3.1 变更:
 """
 import os
 import sys
+import subprocess
 import fcntl
 import sqlite3
 import socket
@@ -359,6 +360,16 @@ def _main(lock_fh):
     # ========== v3.1: 拉取 + 验证 CN 代理 ==========
     print(f"  🔍 拉取 CN 代理...")
     raw_proxies = fetch_cn_proxies()
+    if not raw_proxies:
+        print(f"  ⚠️  拉到 0 个 CN 代理, 触发 discover-cn-proxies.py 补充新源...")
+        try:
+            subprocess.run(
+                [sys.executable, "/opt/subs-check/scripts/discover-cn-proxies.py"],
+                capture_output=True, timeout=120, text=True
+            )
+        except Exception as e:
+            print(f"  ⚠️  discover 异常: {e}")
+        raw_proxies = fetch_cn_proxies()
     print(f"  📡 拉到 {len(raw_proxies)} 个 CN 代理, 开始验证...")
 
     cn_proxies = verify_cn_proxies(raw_proxies)
