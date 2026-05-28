@@ -843,14 +843,11 @@
                 $id('heroPool').classList.remove('ok','warn','err');
                 $id('heroPool').classList.add('ok');
 
-                // Hero 飼料廠（與飼料廠 section 同源 sources_db）
+                // Hero 飼料廠（與飼料廠 section 同源）
                 const sdb = d.sources_db || {};
+                const mc = sdb.maturity_counts || {};
                 $id('heroSrcCount').innerHTML = `${sdb.total_sources ?? '—'}<small>源</small>`;
-                const sc = sdb.status_counts || {};
-                const scored = sc.active || sc.scored || 0;
-                const mapped = sc.testing || sc.mapped || 0;
-                const known = sc.candidate || sc.known || 0;
-                $id('heroSrcMaturity').textContent = `🟢${scored} · 🟡${mapped} · ⚪${known}`;
+                $id('heroSrcMaturity').textContent = `🟢${mc.scored ?? 0} · 🟡${mc.mapped ?? 0} · ⚪${mc.known ?? 0}`;
                 $id('heroSrc').classList.remove('warn','err','ok');
                 $id('heroSrc').classList.add('ok');
 
