@@ -845,9 +845,9 @@
 
                 // Hero 飼料廠（與飼料廠 section 同源）
                 const sdb = d.sources_db || {};
-                const mc = sdb.maturity_counts || {};
                 $id('heroSrcCount').innerHTML = `${sdb.total_sources ?? '—'}<small>源</small>`;
-                $id('heroSrcMaturity').textContent = `🟢${mc.scored ?? 0} · 🟡${mc.mapped ?? 0} · ⚪${mc.known ?? 0}`;
+                // maturity_counts 在 /api/free-pool/sources 裡，此處先顯示總數，maturity 由 sources fetch 更新
+                $id('heroSrcMaturity').textContent = `共 ${sdb.total_sources ?? 0} 源`;
                 $id('heroSrc').classList.remove('warn','err','ok');
                 $id('heroSrc').classList.add('ok');
 
