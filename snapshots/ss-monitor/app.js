@@ -832,11 +832,11 @@
                     ? new Date(inc.timestamp).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})
                     : '—';
 
-                // Hero pool tile (30min incremental-check)
-                $id('heroPoolNodes').innerHTML = `${totalNodes || inc.total_tested || '—'}<small>節點</small>`;
+                // Hero pool tile (30min incremental-check) — 全部用增量探活數據
+                $id('heroPoolNodes').innerHTML = `${inc.total_tested || '—'}<small>已測試</small>`;
                 if (inc.timestamp) {
                     const pr = inc.pass_rate_avg != null ? (inc.pass_rate_avg * 100).toFixed(0) + '%' : '';
-                    $id('heroPoolProg').textContent = `通過 ${inc.passed ?? 0}/${inc.total_tested ?? 0} · ${pr}`;
+                    $id('heroPoolProg').textContent = `通過率 ${pr} · ${inc.passed ?? 0} 通過`;
                 } else {
                     $id('heroPoolProg').textContent = `等待首次探活`;
                 }
