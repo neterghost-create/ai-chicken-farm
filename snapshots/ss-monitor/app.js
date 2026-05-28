@@ -925,8 +925,8 @@
                         const meta = [];
                         if (h.cn_proxies_used) meta.push(`<span class="badge cyan">CN×${h.cn_proxies_used}</span>`);
                         if (h.decaying) meta.push(`<span class="badge warn">▼${h.decaying}</span>`);
-                        if (h.recovering) meta.push(`<span class="badge" style="background:rgba(239,68,68,0.12); color:var(--err); border-color:rgba(239,68,68,0.3);">▲${h.recovering}</span>`);
-                        meta.push(`<span style="color:var(--text-3); font-family:var(--font-mono);">${h.elapsed_sec || 0}s</span>`);
+                        if (h.recovering) meta.push(`<span class="badge err">▲${h.recovering}</span>`);
+                        meta.push(`<span style="color:var(--text-3); font-family:var(--font-mono); font-size:11px;">${h.elapsed_sec || 0}s</span>`);
                         return `<div class="history-item">
                             <span class="round-id" style="color:${prColor};">${prPct}%</span>
                             <div>
