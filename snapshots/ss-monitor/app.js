@@ -483,11 +483,7 @@
             if (pct >= 65) return 'warn';
             return 'ok';
         }
-        function scoreColorFor(score) {
-            return score >= 80 ? 'var(--good)' :
-                   score >= 65 ? 'var(--sky-400)' :
-                   score >= 55 ? 'var(--warn)' : 'var(--text-3)';
-        }
+
         function scorePillClass(score) {
             // v3.0 三态机阈值: ≥90 优秀, 70+ 良好, 50+ 中等 (testing 主区), <50 弱 (recovering 区)
             if (score >= 90) return 's-elite';
