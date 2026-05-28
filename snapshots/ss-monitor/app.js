@@ -792,6 +792,10 @@
                 const passRate = inc.pass_rate_avg != null ? (inc.pass_rate_avg * 100).toFixed(1) + '%' : '—';
                 $id('poolSpeedPass').textContent = passRate;
 
+                // CN 代理數 & 耗時
+                $id('poolCnProxies').textContent = inc.cn_proxies_used ?? '—';
+                $id('poolElapsed').textContent = inc.elapsed_sec != null ? inc.elapsed_sec.toFixed(0) + 's' : '—';
+
                 // 節點池 (30min incremental-check 状态分布)
                 const sd = d.state_distribution || {};
                 const totalNodes = Object.values(sd).reduce((a, b) => a + b, 0);
