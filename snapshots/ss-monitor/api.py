@@ -266,11 +266,6 @@ def get_source_db_stats():
             FROM sources WHERE status != 'blacklisted'
             ORDER BY score DESC, total_passes DESC LIMIT 5
         """).fetchall()
-        # 黑名单 (按解封时间)
-        blacklisted = db.execute("""
-            SELECT url, blocked_until FROM sources
-            WHERE status='blacklisted' ORDER BY blocked_until LIMIT 3
-        """).fetchall()
         # metadata
         last_etag = db.execute("SELECT value FROM metadata WHERE key='lza6_etag'").fetchone()
         last_sync = db.execute("SELECT value FROM metadata WHERE key='last_sync_at'").fetchone()
@@ -284,9 +279,6 @@ def get_source_db_stats():
                     'passes': p, 'checks': c, 'status': st
                 }
                 for u, s, p, c, st in top_sources
-            ],
-            'blacklisted': [
-                {'url': u, 'until': bu} for u, bu in blacklisted
             ],
             'last_etag': (last_etag[0][:16] + '...') if last_etag else None,
             'last_sync_at': last_sync[0] if last_sync else None,
@@ -421,12 +413,9 @@ def get_quality():
         except sq.OperationalError:
             state_counts = {}
             has_state = False
-        # 兼容旧字段 (active / blacklisted)
+        # v3.0: active = testing + decaying + recovering
         active = db.execute(
-            "SELECT COUNT(*) FROM nodes_history WHERE blacklisted_until IS NULL"
-        ).fetchone()[0]
-        blacklisted = db.execute(
-            "SELECT COUNT(*) FROM nodes_history WHERE blacklisted_until IS NOT NULL"
+            "SELECT COUNT(*) FROM nodes_history WHERE state != 'recovering' OR state IS NULL"
         ).fetchone()[0]
         # 评分分布
         bands = db.execute("""
@@ -471,20 +460,12 @@ def get_quality():
             WHERE quality_score < 30 OR state = 'recovering'
             ORDER BY quality_score ASC
             LIMIT 20
-        """ if has_state else """
-            SELECT canonical_sig, blacklisted_until as state, region, protocol,
-                   quality_score, sample_name
-            FROM nodes_history
-            WHERE blacklisted_until IS NOT NULL
-            ORDER BY blacklisted_until
-            LIMIT 20
         """).fetchall()
         db.close()
         return jsonify({
             'summary': {
                 'total': total,
                 'active': active,
-                'blacklisted': blacklisted,
                 'state_counts': state_counts,   # v3.0
             },
             'score_bands': [{'band': b, 'count': c} for b, c in bands],
