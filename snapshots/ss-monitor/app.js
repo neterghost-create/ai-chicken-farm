@@ -447,6 +447,22 @@
             const s = String(u).trim();
             return /^https?:\/\//i.test(s) ? s : '#';
         }
+        // 智能 URL 顯示: host + 路徑最後一段, hover 顯示完整
+        function smartUrl(url, maxLen) {
+            if (!url) return { text: '', full: '' };
+            try {
+                const u = new URL(url);
+                const host = u.hostname.replace(/^www\./, '');
+                const parts = u.pathname.split('/').filter(Boolean);
+                const last = parts.length > 0 ? parts[parts.length - 1] : '';
+                const hash = u.hash || '';
+                const label = last ? `${host}/${last}${hash}` : host;
+                return { text: label, full: url };
+            } catch {
+                const s = String(url);
+                return { text: s.length > (maxLen||60) ? s.slice(0, maxLen||60) + '…' : s, full: s };
+            }
+        }
 
         function fmtBytes(b) {
             if (b == null) return '—';
