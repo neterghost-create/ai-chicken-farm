@@ -76,7 +76,7 @@
                 <div class="kv-row"><span class="k">進程數</span><span class="v" id="vpsProc">—</span></div>
             </div>
 
-            <div class="section-title">資源使用</div>
+            <div class="section-title" style="margin-top:18px;">資源使用</div>
             <div class="stat-grid" id="vpsResources">
                 <div class="stat-tile">
                     <div class="label">CPU</div>
@@ -135,7 +135,7 @@
                 <div class="kv-row"><span class="k">記憶體佔用</span><span class="v" id="poolMemory">—</span></div>
             </div>
 
-            <div class="section-title" data-i18n="pool.section.progress">📊 增量探活 (30min)</div>
+            <div class="section-title" style="margin-top:18px;">📊 增量探活 (30min)</div>
             <div class="stat-grid">
                 <div class="stat-tile"><div class="label" data-i18n="pool.tested">測試</div><div class="value" id="poolTested" style="font-size:16px;">—</div></div>
                 <div class="stat-tile"><div class="label" data-i18n="pool.alive">通過</div><div class="value" id="poolAlive" style="color:var(--good);">—</div></div>
@@ -148,24 +148,24 @@
                 <div class="stat-tile" style="grid-column:span 2;"><div class="label" data-i18n="pool.lastRun">上次探活</div><div class="value" id="poolLastRun" style="font-size:13px;">—</div></div>
             </div>
 
-            <div class="section-title" data-i18n="pool.section.stats">🌐 狀態分布</div>
+            <div class="section-title" style="margin-top:18px;">🌐 狀態分布</div>
             <div class="stat-grid">
                 <div class="stat-tile"><div class="label" data-i18n="pool.totalNodes">測試節點</div><div class="value" id="poolTotalNodes" style="color:var(--good);">—</div></div>
                 <div class="stat-tile" style="grid-column: span 2;"><div class="label" data-i18n="pool.protocols">狀態分布</div><div class="chips" id="poolProtocols" style="margin-top:8px;"><span class="loading" style="padding:0;">加載中...</span></div></div>
                 <div class="stat-tile"><div class="label" data-i18n="pool.stateDecaying">▼ decaying</div><div class="value" id="poolDecaying" style="color:var(--good); font-size:14px;">—</div></div>
             </div>
 
-            <div class="section-title">📈 輪次趨勢 (最近 20 輪)</div>
+            <div class="section-title" style="margin-top:18px;">📈 輪次趨勢 (最近 20 輪)</div>
             <div class="history-list" id="historyList"><div class="loading">加載中...</div></div>
 
-            <div class="section-title">🔄 上輪 vs 這輪 Diff</div>
+            <div class="section-title" style="margin-top:18px;">🔄 上輪 vs 這輪 Diff</div>
             <div class="diff-grid">
                 <div class="diff-tile"><div class="label">+ 新增</div><div class="value" id="diffAdded" style="color:var(--good);">—</div></div>
                 <div class="diff-tile"><div class="label">- 消失</div><div class="value" id="diffRemoved" style="color:var(--err);">—</div></div>
                 <div class="diff-tile"><div class="label">= 穩定</div><div class="value" id="diffKept">—</div></div>
             </div>
 
-            <div class="section-title">📋 當前輪節點表</div>
+            <div class="section-title" style="margin-top:18px;">📋 當前輪節點表</div>
             <div class="toolbar">
                 <input type="text" id="nodeFilter" placeholder="搜尋 (名稱/地區/協議)..." data-i18n-placeholder="pool.search.placeholder">
                 <select id="nodeSort">
@@ -215,7 +215,7 @@
                 <div class="kv-row"><span class="k" data-i18n="discover.auditCount">30天審計事件</span><span class="v" id="discoverAuditCount">—</span></div>
             </div>
 
-            <div class="section-title" data-i18n="discover.section.queue">📊 隊列掃描狀態</div>
+            <div class="section-title" style="margin-top:18px;">📊 隊列掃描狀態</div>
             <div class="stat-grid" id="discoverKindGrid">
                 <div class="stat-tile"><div class="label" data-i18n="discover.kind.awesome">awesome README</div><div class="value" id="discoverKindAwesome" style="font-size:16px;">—</div><div style="font-size:11px; color:var(--text-3); margin-top:4px;" id="discoverKindAwesomeHint">—</div></div>
                 <div class="stat-tile"><div class="label" data-i18n="discover.kind.topic">GitHub topics</div><div class="value" id="discoverKindTopic" style="font-size:16px;">—</div><div style="font-size:11px; color:var(--text-3); margin-top:4px;" id="discoverKindTopicHint">—</div></div>
@@ -223,13 +223,13 @@
                 <div class="stat-tile"><div class="label" data-i18n="discover.kind.audit">現有源審計</div><div class="value" id="discoverKindAudit" style="font-size:16px;">—</div><div style="font-size:11px; color:var(--text-3); margin-top:4px;" id="discoverKindAuditHint">score &lt; 80 才掃</div></div>
             </div>
 
-            <div class="section-title" data-i18n="discover.section.recentAdded">🌱 最近 7 天新增源</div>
+            <div class="section-title" style="margin-top:18px;">🌱 最近 7 天新增源</div>
             <div class="src-list" id="discoverRecentAdded"><div class="loading">加載中...</div></div>
 
-            <div class="section-title" data-i18n="discover.section.audit">🛡️ 審計事件 (最近 20 條)</div>
+            <div class="section-title" style="margin-top:18px;">🛡️ 審計事件 (最近 20 條)</div>
             <div class="src-list" id="discoverAuditList"><div class="loading">加載中...</div></div>
 
-            <div class="section-title" data-i18n="discover.section.queueDetail">📋 發現隊列詳情</div>
+            <div class="section-title" style="margin-top:18px;">📋 發現隊列詳情</div>
             <div class="table-wrap"><div class="table-scroll">
                 <table class="data" id="discoverQueueTable">
                     <thead>
@@ -276,7 +276,7 @@
                 <div class="stat-tile"><div class="label">黑名單 48h</div><div class="value" id="qBlacklisted" style="color:var(--err);">—</div></div>
             </div>
 
-            <div class="section-title">📊 評分分佈</div>
+            <div class="section-title" style="margin-top:18px;">📊 評分分佈</div>
             <div id="qBands"><div class="loading">加載中...</div></div>
 
             <div class="section-title" style="margin-top:18px;">🥇 TOP 30 極品節點</div>
@@ -299,10 +299,10 @@
                 </table>
             </div></div>
 
-            <div class="section-title">⛔ 黑名單 (節點級, 自動 48h 解封)</div>
+            <div class="section-title" style="margin-top:18px;">⛔ 黑名單 (節點級, 自動 48h 解封)</div>
             <div id="qBlacklistList"><div class="loading">加載中...</div></div>
 
-            <div class="section-title" data-i18n="quality.cnProxy">🛜 CN 代理探活</div>
+            <div class="section-title" style="margin-top:18px;">🛜 CN 代理探活</div>
             <div id="qCnProxyStats" class="stat-grid" style="margin-bottom:10px;"></div>
             <div id="qCnProxySources"><div class="loading">加載中...</div></div>
         
@@ -344,7 +344,7 @@
                 </div>
             </div>
 
-            <div class="section-title">📚 訂閱源評分庫</div>
+            <div class="section-title" style="margin-top:18px;">📚 訂閱源評分庫</div>
             <div class="kv-grid">
                 <div class="kv-row"><span class="k">已知源總數</span><span class="v" id="dbTotalSources">—</span></div>
                 <div class="kv-row"><span class="k">狀態分佈</span><span class="v" id="dbStatusCounts">—</span></div>
@@ -358,7 +358,7 @@
                 <div class="src-list" id="dbBlacklisted"><div class="loading">加載中...</div></div>
             </div>
 
-            <div class="section-title" data-i18n="src.section.progress">📊 大輪進度 (6h)</div>
+            <div class="section-title" style="margin-top:18px;">📊 大輪進度 (6h)</div>
             <div class="stat-grid">
                 <div class="stat-tile"><div class="label" data-i18n="src.round.tested">測活</div><div class="value" id="srcRoundTested" style="font-size:16px;">—</div></div>
                 <div class="stat-tile"><div class="label" data-i18n="src.round.alive">存活</div><div class="value" id="srcRoundAlive" style="color:var(--good);">—</div></div>
@@ -366,7 +366,7 @@
                 <div class="stat-tile"><div class="label" data-i18n="src.round.speed">測速通過</div><div class="value" id="srcRoundSpeed" style="color:var(--good);">—</div></div>
             </div>
 
-            <div class="section-title" data-i18n="src.section.poolStats">🌐 大輪統計</div>
+            <div class="section-title" style="margin-top:18px;">🌐 大輪統計</div>
             <div class="stat-grid">
                 <div class="stat-tile"><div class="label" data-i18n="src.round.totalNodes">可用節點</div><div class="value" id="srcRoundTotalNodes" style="color:var(--good);">—</div></div>
                 <div class="stat-tile" style="grid-column: span 2;"><div class="label" data-i18n="src.round.protocols">協議分布</div><div class="chips" id="srcRoundProtocols" style="margin-top:8px;"><span class="loading" style="padding:0;">加載中...</span></div></div>
