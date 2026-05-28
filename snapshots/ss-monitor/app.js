@@ -1224,6 +1224,9 @@
                 $id('srcMatMapped').textContent = mc.mapped ?? '—';
                 $id('srcMatKnown').textContent = mc.known ?? '—';
 
+                // 同步 Hero 飼料廠 maturity
+                $id('heroSrcMaturity').textContent = `🟢${mc.scored ?? 0} · 🟡${mc.mapped ?? 0} · ⚪${mc.known ?? 0}`;
+
                 __allSources = d.sources || [];
                 renderSourceTable();
             } catch (e) {
