@@ -923,10 +923,10 @@
                         const prPct = (h.pass_rate_avg * 100).toFixed(0);
                         const prColor = h.pass_rate_avg >= 0.7 ? 'var(--good)' : h.pass_rate_avg >= 0.4 ? 'var(--warn)' : 'var(--err)';
                         const meta = [];
-                        if (h.cn_proxies_used) meta.push(`CN×${h.cn_proxies_used}`);
-                        if (h.decaying) meta.push(`<span style="color:var(--good);">▼${h.decaying}</span>`);
-                        if (h.recovering) meta.push(`<span style="color:var(--err);">▲${h.recovering}</span>`);
-                        meta.push(`${h.elapsed_sec || 0}s`);
+                        if (h.cn_proxies_used) meta.push(`<span class="badge" style="background:rgba(34,211,238,0.15); color:var(--ok);">CN×${h.cn_proxies_used}</span>`);
+                        if (h.decaying) meta.push(`<span class="badge" style="background:rgba(251,191,36,0.15); color:var(--warn);">▼${h.decaying}</span>`);
+                        if (h.recovering) meta.push(`<span class="badge" style="background:rgba(239,68,68,0.15); color:var(--err);">▲${h.recovering}</span>`);
+                        meta.push(`<span style="color:var(--text-3);">${h.elapsed_sec || 0}s</span>`);
                         return `<div class="history-item">
                             <span class="round-id" style="color:${prColor};">${prPct}%</span>
                             <div>
