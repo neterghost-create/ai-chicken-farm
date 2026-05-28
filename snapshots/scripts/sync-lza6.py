@@ -33,6 +33,7 @@ v3.0 选源策略 (80 源):
   - 用 ETag/If-None-Match 304 short-circuit, README 没变就只跑状态机扫描
 """
 import os
+import fcntl
 import re
 import sys
 import sqlite3
@@ -488,71 +489,83 @@ def sync_config_yaml_and_reload(urls, dry_run=False):
 
 # ============= 主流程 =============
 def main(dry_run=False):
+    # 文件锁: 防止并发运行, 同时让 discover-airports 感知
+    lock_fh = open("/run/sync-lza6.lock", "w")
+    try:
+        fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print("  ⚠️  sync-lza6 已在运行, 跳过")
+        return 3
+
     print(f"[{datetime.now()}] sync-lza6-v2.py start (dry_run={dry_run})")
     db = get_db()
 
-    # 1. 抓 lza6 (ETag 短路)
     try:
-        changed, text, etag = fetch_readme(db)
-    except Exception as e:
-        print(f"  ✗ 抓取失败: {e}")
-        return 1
+        # 1. 抓 lza6 (ETag 短路)
+        try:
+            changed, text, etag = fetch_readme(db)
+        except Exception as e:
+            print(f"  ✗ 抓取失败: {e}")
+            return 1
 
-    if not changed:
-        print(f"  ℹ️  lza6 README 未变化 (ETag={etag[:32]}...) → 仅跑状态机")
-    else:
-        print(f"  ✓ lza6 README 已变化 (新 ETag={etag[:32] if etag else 'n/a'}...)")
-        urls = extract_subscription_urls(text)
-        print(f"  ✓ 提取 {len(urls)} 个候选 URL")
-        surv, rej = filter_blacklist(urls)
-        print(f"  ✓ 关键字黑名单: 保留 {len(surv)}, 剔除 {len(rej)}")
-        upsert_seen(db, surv)
-        if etag:
-            set_meta(db, 'lza6_etag', etag)
+        if not changed:
+            print(f"  ℹ️  lza6 README 未变化 (ETag={etag[:32]}...) → 仅跑状态机")
+        else:
+            print(f"  ✓ lza6 README 已变化 (新 ETag={etag[:32] if etag else 'n/a'}...)")
+            urls = extract_subscription_urls(text)
+            print(f"  ✓ 提取 {len(urls)} 个候选 URL")
+            surv, rej = filter_blacklist(urls)
+            print(f"  ✓ 关键字黑名单: 保留 {len(surv)}, 剔除 {len(rej)}")
+            upsert_seen(db, surv)
+            if etag:
+                set_meta(db, 'lza6_etag', etag)
 
-    # 2. 状态机扫描 (dry-run 模式跳过, 避免污染 DB)
-    if dry_run:
-        print(f"  [dry-run] 跳过状态机扫描 (避免改 DB)")
-    else:
-        n_f, n_p, n_dec, n_rec, n_d2t, n_r2t = apply_state_machine(db)
-        print(f"  ✓ v3.0 源三态机: 失败 {n_f}, 通过 {n_p}, "
-              f"→decaying {n_dec}, →recovering {n_rec}, "
-              f"hysteresis dec→test {n_d2t}, rec→test {n_r2t}")
+        # 2. 状态机扫描 (dry-run 模式跳过, 避免污染 DB)
+        if dry_run:
+            print(f"  [dry-run] 跳过状态机扫描 (避免改 DB)")
+        else:
+            n_f, n_p, n_dec, n_rec, n_d2t, n_r2t = apply_state_machine(db)
+            print(f"  ✓ v3.0 源三态机: 失败 {n_f}, 通过 {n_p}, "
+                  f"→decaying {n_dec}, →recovering {n_rec}, "
+                  f"hysteresis dec→test {n_d2t}, rec→test {n_r2t}")
 
-    # 3. 选源 (用户白 + 未评分 + testing + recovering + decaying)
-    final, wl_n, layer_stats = select_sources(db, MAX_SOURCES)
-    counts = db.execute(
-        "SELECT state, COUNT(*) FROM sources GROUP BY state"
-    ).fetchall()
-    counts_str = ', '.join(f"{s or 'null'}={c}" for s, c in counts)
-    print(f"  ✓ DB 状态分布: {counts_str}")
-    print(f"  ✓ 选源 v3.0: {len(final)} 个 (用户白 {layer_stats['user_wl']}"
-          f" + 未评分 {layer_stats['unexplored']}"
-          f" + testing {layer_stats['testing']}"
-          f" + recovering {layer_stats['recovering']}"
-          f" + decaying {layer_stats['decaying']})")
+        # 3. 选源 (用户白 + 未评分 + testing + recovering + decaying)
+        final, wl_n, layer_stats = select_sources(db, MAX_SOURCES)
+        counts = db.execute(
+            "SELECT state, COUNT(*) FROM sources GROUP BY state"
+        ).fetchall()
+        counts_str = ', '.join(f"{s or 'null'}={c}" for s, c in counts)
+        print(f"  ✓ DB 状态分布: {counts_str}")
+        print(f"  ✓ 选源 v3.0: {len(final)} 个 (用户白 {layer_stats['user_wl']}"
+              f" + 未评分 {layer_stats['unexplored']}"
+              f" + testing {layer_stats['testing']}"
+              f" + recovering {layer_stats['recovering']}"
+              f" + decaying {layer_stats['decaying']})")
 
-    # 4. 写 sub-urls.txt
-    if dry_run:
-        print(f"\n[DRY RUN] 不写入文件")
-        print(f"前 8 条预览:")
-        for u in final[:8]:
-            print(f"  {u}")
+        # 4. 写 sub-urls.txt
+        if dry_run:
+            print(f"\n[DRY RUN] 不写入文件")
+            print(f"前 8 条预览:")
+            for u in final[:8]:
+                print(f"  {u}")
+            return 0
+
+        changed_file, backup = write_sub_urls(final, wl_n, is_unchanged=False)
+        if changed_file:
+            print(f"  ✓ sub-urls.txt 已更新 ({len(final)} 行), 备份到 {backup}")
+        else:
+            print(f"  ℹ️  sub-urls.txt 内容未变化, 不写入")
+
+        # 5. 同步 config.yaml + 视情况 reload subs-check
+        if changed_file:
+            sync_config_yaml_and_reload(final, dry_run=False)
+
+        set_meta(db, 'last_sync_at', datetime.now(timezone.utc).isoformat())
+        set_meta(db, 'last_sync_count', len(final))
         return 0
-
-    changed_file, backup = write_sub_urls(final, wl_n, is_unchanged=False)
-    if changed_file:
-        print(f"  ✓ sub-urls.txt 已更新 ({len(final)} 行), 备份到 {backup}")
-    else:
-        print(f"  ℹ️  sub-urls.txt 内容未变化, 不写入")
-
-    # 5. 同步 config.yaml + 视情况 reload subs-check
-    if changed_file:
-        sync_config_yaml_and_reload(final, dry_run=False)
-
-    set_meta(db, 'last_sync_at', datetime.now(timezone.utc).isoformat())
-    set_meta(db, 'last_sync_count', len(final))
-    return 0
+    finally:
+        fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
+        lock_fh.close()
 
 if __name__ == '__main__':
     dry_run = '--dry-run' in sys.argv
