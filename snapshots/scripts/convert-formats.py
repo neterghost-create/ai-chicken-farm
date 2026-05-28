@@ -967,7 +967,41 @@ def main(force=False):
     with open(INPUT_YAML) as f:
         data = yaml.safe_load(f)
     proxies = data.get('proxies', [])
-    print(f"  解析 {len(proxies)} 节点")
+    raw_count = len(proxies)
+    print(f"  解析 {raw_count} 节点")
+
+    # ===== 质量门槛过滤 (v3.0 三态机 + 评分) =====
+    # 排除: recovering (触底不稳定) + quality_score < 50 (低分)
+    try:
+        hdb = sqlite3.connect(HISTORY_DB, timeout=5)
+        quality_map = {}
+        for r in hdb.execute(
+            "SELECT canonical_sig, quality_score, state, total_appearances FROM nodes_history"
+        ):
+            quality_map[r[0]] = {'score': r[1], 'state': r[2], 'apps': r[3]}
+        hdb.close()
+
+        QUALITY_MIN_SCORE = 50
+        filtered_proxies = []
+        for p in proxies:
+            sig = f"{p.get('server','')}:{p.get('port','')}:{p.get('type','')}"
+            q = quality_map.get(sig)
+            if q:
+                if q['state'] == 'recovering':
+                    continue  # 触底被动恢复, 不稳定
+                if q['score'] < QUALITY_MIN_SCORE:
+                    continue  # 低分
+            # 新节点 (不在 history.db 中) 保留, 给机会
+            filtered_proxies.append(p)
+
+        removed = raw_count - len(filtered_proxies)
+        if removed > 0:
+            print(f"  📊 质量过滤: {raw_count} → {len(filtered_proxies)} (移除 {removed} 低分/recovering)")
+            proxies = filtered_proxies
+        else:
+            print(f"  📊 质量过滤: 全部通过")
+    except Exception as e:
+        print(f"  ⚠️  质量过滤跳过 (DB异常): {e}")
 
     # 协议分布
     type_counts = {}
@@ -995,15 +1029,14 @@ def main(force=False):
     print(f"  转换: {len(v2ray_lines)} v2ray URL, 跳过 {skipped_types}")
 
     # ===== 写订阅文件到 token 子目录 =====
-    # 注: subs-check 已把 all.yaml 直接写到 token 子目录, 我们只生成衍生文件
-    # 如果 INPUT_YAML 不在 token 子目录 (回退模式 = subs-check 老进程写到老路径),
-    # 则复制到 token 子目录, 然后删除老路径副本 (不让它残留, 即便 nginx 已 403)
+    # 用过滤后的 proxies 重写 all.yaml (质量门槛生效)
     target_yaml = os.path.join(sub_dir, 'all.yaml')
+    data['proxies'] = proxies
+    with open(target_yaml, 'w') as f:
+        yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    print(f"  ✓ 写入 all.yaml (过滤后 {len(proxies)} 节点)")
+    # 如果 INPUT_YAML 不在 token 子目录, 清理老路径副本
     if os.path.abspath(INPUT_YAML) != os.path.abspath(target_yaml):
-        import shutil
-        shutil.copy2(INPUT_YAML, target_yaml)
-        print(f"  ✓ 复制 all.yaml 到 token 子目录")
-        # 安全清理: 删除老路径副本 (subs-check 下次重启后会自己写到 token 子目录)
         if INPUT_YAML.startswith(OUT_DIR + '/') and not INPUT_YAML.startswith(sub_dir + '/'):
             try:
                 os.remove(INPUT_YAML)

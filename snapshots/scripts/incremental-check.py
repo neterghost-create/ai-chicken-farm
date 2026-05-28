@@ -47,7 +47,7 @@ LOCK_FILE = "/run/incremental-check.lock"
 
 # ============= v3.1 配置 =============
 CONCURRENT = 20
-TIMEOUT_PER_NODE = 5
+TIMEOUT_PER_NODE = 8
 MAX_RUNTIME_SEC = 300       # 整体 5min 不超
 ACTIVE_WITHIN_ROUNDS = 5    # 最近 N 轮内出现过的才测
 
