@@ -79,6 +79,54 @@ KNOWN_CN_PROXY_APIS = [
         "protocol": "http",
         "priority": 30,
     },
+    {
+        "key": "proxyscrape-http-fast",
+        "name": "ProxyScrape HTTP Fast (CN)",
+        "url": "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country=cn&ssl=all&anonymity=all",
+        "format": "lines",
+        "protocol": "http",
+        "priority": 15,
+    },
+    {
+        "key": "proxyscrape-socks5-fast",
+        "name": "ProxyScrape SOCKS5 Fast (CN)",
+        "url": "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5&timeout=5000&country=cn",
+        "format": "lines",
+        "protocol": "socks5",
+        "priority": 15,
+    },
+    {
+        "key": "geonode-http-all",
+        "name": "Geonode HTTP All (CN)",
+        "url": "https://proxylist.geonode.com/api/proxy-list?limit=100&page=1&sort_by=lastChecked&sort_type=desc&country=CN&protocols=http%2Chttps",
+        "format": "json",
+        "protocol": "http",
+        "priority": 25,
+    },
+    {
+        "key": "geonode-socks5-all",
+        "name": "Geonode SOCKS5 All (CN)",
+        "url": "https://proxylist.geonode.com/api/proxy-list?limit=100&page=1&sort_by=lastChecked&sort_type=desc&country=CN&protocols=socks5",
+        "format": "json",
+        "protocol": "socks5",
+        "priority": 25,
+    },
+    {
+        "key": "proxyspace-http",
+        "name": "ProxySpace HTTP",
+        "url": "https://proxyspace.pro/http.txt",
+        "format": "lines",
+        "protocol": "http",
+        "priority": 40,
+    },
+    {
+        "key": "proxyspace-socks5",
+        "name": "ProxySpace SOCKS5",
+        "url": "https://proxyspace.pro/socks5.txt",
+        "format": "lines",
+        "protocol": "socks5",
+        "priority": 40,
+    },
 ]
 
 # ========== GitHub 搜索关键词 ==========
@@ -88,6 +136,11 @@ GITHUB_SEARCH_QUERIES = [
     "中国免费代理",
     "china socks5 proxy list",
     "free cn http proxy",
+    "cn proxy pool",
+    "china proxy aggregator",
+    "免费代理池 中国",
+    "socks5 proxy china free",
+    "http proxy china list",
 ]
 
 

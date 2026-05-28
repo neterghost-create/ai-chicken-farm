@@ -365,10 +365,15 @@ def main():
         use_tls = protocol in ('vless', 'trojan', 'vmess', 'hysteria', 'hysteria2')
 
         if use_proxy:
-            # 通过所有 CN 代理测试
+            # 通过所有 CN 代理测试, 带重试
             results = []
             for proxy in cn_proxies:
                 ok, reason = probe_via_proxy(proxy, server, port, use_tls=use_tls)
+                # 代理连接失败时重试一次 (可能是代理临时问题)
+                if not ok and reason in ("timeout", "refuse_ProxyConnectionError", "refuse_ConnectionResetError"):
+                    ok2, reason2 = probe_via_proxy(proxy, server, port, use_tls=use_tls)
+                    if ok2:
+                        ok, reason = ok2, reason2
                 results.append((ok, reason))
             pass_count = sum(1 for ok, _ in results if ok)
             pass_rate = pass_count / len(results) if results else 0.0
