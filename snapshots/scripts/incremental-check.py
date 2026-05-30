@@ -178,8 +178,9 @@ def verify_cn_proxies(proxies: list) -> list:
     return verified[:CN_PROXY_MAX]
 
 
-def _probe_socks5(proxy_host: str, proxy_port: int, server: str, port: int, use_tls: bool) -> tuple[bool, str]:
+def _probe_socks5(proxy_host: str, proxy_port: int, server: str, port: int, use_tls: bool) -> tuple[bool, str, float]:
     """通过 SOCKS5 代理测试节点"""
+    t0 = time.monotonic()
     try:
         sock = socks.socksocket()
         sock.setproxy(socks.SOCKS5, proxy_host, proxy_port)
@@ -194,32 +195,33 @@ def _probe_socks5(proxy_host: str, proxy_port: int, server: str, port: int, use_
                     ssock.settimeout(TIMEOUT_PER_NODE)
             except (ssl.SSLError, OSError, socket.timeout):
                 sock.close()
-                return True, "tcp-only"
+                return True, "tcp-only", (time.monotonic() - t0) * 1000
         else:
             sock.close()
-        return True, "ok"
+        return True, "ok", (time.monotonic() - t0) * 1000
     except socket.gaierror:
-        return False, "dns_fail"
+        return False, "dns_fail", 0
     except (socket.timeout, TimeoutError):
-        return False, "timeout"
+        return False, "timeout", 0
     except (ConnectionRefusedError, OSError) as e:
-        return False, f"refuse_{type(e).__name__}"
+        return False, f"refuse_{type(e).__name__}", 0
     except Exception as e:
-        return False, f"unknown_{type(e).__name__}"
+        return False, f"unknown_{type(e).__name__}", 0
     finally:
         try: sock.close()
         except: pass
 
 
-def _probe_http(proxy_host: str, proxy_port: int, server: str, port: int, use_tls: bool) -> tuple[bool, str]:
+def _probe_http(proxy_host: str, proxy_port: int, server: str, port: int, use_tls: bool) -> tuple[bool, str, float]:
     """通过 HTTP CONNECT 代理测试节点"""
+    t0 = time.monotonic()
     try:
         sock = _ORIG_CREATE_CONNECTION((proxy_host, proxy_port), timeout=TIMEOUT_PER_NODE)
         sock.sendall(f"CONNECT {server}:{port} HTTP/1.1\r\nHost: {server}:{port}\r\n\r\n".encode())
         resp = sock.recv(1024).decode()
         if "200" not in resp:
             sock.close()
-            return False, "connect_fail"
+            return False, "connect_fail", 0
         if use_tls:
             try:
                 ctx = ssl.create_default_context()
@@ -229,24 +231,24 @@ def _probe_http(proxy_host: str, proxy_port: int, server: str, port: int, use_tl
                     ssock.settimeout(TIMEOUT_PER_NODE)
             except (ssl.SSLError, OSError, socket.timeout):
                 sock.close()
-                return True, "tcp-only"
+                return True, "tcp-only", (time.monotonic() - t0) * 1000
         else:
             sock.close()
-        return True, "ok"
+        return True, "ok", (time.monotonic() - t0) * 1000
     except socket.gaierror:
-        return False, "dns_fail"
+        return False, "dns_fail", 0
     except (socket.timeout, TimeoutError):
-        return False, "timeout"
+        return False, "timeout", 0
     except (ConnectionRefusedError, OSError) as e:
-        return False, f"refuse_{type(e).__name__}"
+        return False, f"refuse_{type(e).__name__}", 0
     except Exception as e:
-        return False, f"unknown_{type(e).__name__}"
+        return False, f"unknown_{type(e).__name__}", 0
     finally:
         try: sock.close()
         except: pass
 
 
-def probe_via_proxy(proxy: tuple, server: str, port: int, use_tls: bool = True) -> tuple[bool, str]:
+def probe_via_proxy(proxy: tuple, server: str, port: int, use_tls: bool = True) -> tuple[bool, str, float]:
     """通过 CN 代理测试节点连通性"""
     proto, proxy_host, proxy_port = proxy
     if proto == "socks5":
@@ -388,38 +390,44 @@ def _main(lock_fh):
     start_time = time.time()
     n_pass = n_fail = n_skip = n_decaying = n_recovering = 0
     fail_reasons = {}
+    latency_map = {}  # sig → median_latency_ms (CN 代理视角)
 
     def worker(row):
-        """测试单个节点: 通过所有 CN 代理测试, 返回 (sig, pass_rate, details)"""
+        """测试单个节点: 通过所有 CN 代理测试, 返回 (sig, pass_rate, details, median_latency_ms)"""
         sig, protocol, last_rid = row
         server, port = parse_sig(sig)
         if not server or not port:
-            return sig, 0.0, "bad_sig"
+            return sig, 0.0, "bad_sig", 0
         use_tls = protocol in ('vless', 'trojan', 'vmess', 'hysteria', 'hysteria2')
 
         if use_proxy:
-            # 通过所有 CN 代理测试, 带重试
+            # 通过所有 CN 代理测试, 带重试, 收集延迟
             results = []
+            latencies = []
             for proxy in cn_proxies:
-                ok, reason = probe_via_proxy(proxy, server, port, use_tls=use_tls)
+                ok, reason, latency = probe_via_proxy(proxy, server, port, use_tls=use_tls)
                 # 代理连接失败时重试一次 (可能是代理临时问题)
                 if not ok and reason in ("timeout", "refuse_ProxyConnectionError", "refuse_ConnectionResetError"):
-                    ok2, reason2 = probe_via_proxy(proxy, server, port, use_tls=use_tls)
+                    ok2, reason2, latency2 = probe_via_proxy(proxy, server, port, use_tls=use_tls)
                     if ok2:
-                        ok, reason = ok2, reason2
+                        ok, reason, latency = ok2, reason2, latency2
                 results.append((ok, reason))
+                if ok and latency > 0:
+                    latencies.append(latency)
             pass_count = sum(1 for ok, _ in results if ok)
             pass_rate = pass_count / len(results) if results else 0.0
             fail_reasons_list = [r for ok, r in results if not ok]
             details = f"{pass_count}/{len(results)}"
             if fail_reasons_list:
                 details += f" ({','.join(set(fail_reasons_list))})"
-            return sig, pass_rate, details
+            # 延迟中位数 (仅成功连接)
+            median_lat = sorted(latencies)[len(latencies)//2] if latencies else 0
+            return sig, pass_rate, details, round(median_lat, 1)
         else:
             # 直连模式
             ok, reason = probe_direct(server, port, use_tls=use_tls)
             pass_rate = 1.0 if ok else 0.0
-            return sig, pass_rate, reason
+            return sig, pass_rate, reason, 0
 
     with ThreadPoolExecutor(max_workers=CONCURRENT) as ex:
         futures = {ex.submit(worker, r): r[0] for r in targets}
@@ -434,7 +442,7 @@ def _main(lock_fh):
                 break
 
             try:
-                sig, pass_rate, details = fut.result()
+                sig, pass_rate, details, median_lat = fut.result()
             except Exception:
                 continue
 
@@ -445,6 +453,8 @@ def _main(lock_fh):
 
             if pass_rate > 0:
                 n_pass += 1
+                if median_lat > 0:
+                    latency_map[sig] = median_lat
             else:
                 n_fail += 1
                 if details not in fail_reasons:
@@ -457,6 +467,7 @@ def _main(lock_fh):
                     incremental_fail = incremental_fail + ?,
                     consecutive_fails = CASE WHEN ? > 0 THEN 0 ELSE consecutive_fails + 1 END,
                     quality_score = MAX(0.0, MIN(100.0, COALESCE(quality_score, 50.0) + ?)),
+                    cn_latency_ms = CASE WHEN ? > 0 THEN ? ELSE cn_latency_ms END,
                     last_seen = ?
                 WHERE canonical_sig = ?
             """, (
@@ -464,6 +475,7 @@ def _main(lock_fh):
                 0 if pass_rate > 0 else 1,
                 pass_rate,
                 score_delta,
+                median_lat, median_lat,
                 now,
                 sig
             ))
@@ -506,6 +518,7 @@ def _main(lock_fh):
             "decaying": n_decaying,
             "recovering": n_recovering,
             "cn_proxies_used": len(cn_proxies) if use_proxy else 0,
+            "avg_latency_ms": round(sum(latency_map.values()) / len(latency_map), 1) if latency_map else 0,
             "elapsed_sec": round(elapsed, 1),
         }
         # Read existing, append, trim to 50

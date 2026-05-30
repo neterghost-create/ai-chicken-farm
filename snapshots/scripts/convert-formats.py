@@ -505,7 +505,7 @@ def update_nodes_history(db, summaries: list, round_id: int):
 
         row = db.execute(
             "SELECT total_appearances, consecutive_appearances, avg_speed_kbps, "
-            "quality_score, last_round_id, state "
+            "quality_score, last_round_id, state, COALESCE(cn_latency_ms, 0) "
             "FROM nodes_history WHERE canonical_sig = ?",
             (sig,)
         ).fetchone()
@@ -533,7 +533,7 @@ def update_nodes_history(db, summaries: list, round_id: int):
             """, (sig, now, now, speed if speed else 0, speed if speed else 0,
                   cons_apps, round_id, region, proto, name, new_score, new_state))
         else:
-            (total_apps, cons_apps, avg_speed, old_score, last_rid, state) = row
+            (total_apps, cons_apps, avg_speed, old_score, last_rid, state, cn_lat) = row
 
             # 是不是连续出现 (上一轮 round_id == 当前-1)
             if last_rid == round_id - 1:
@@ -547,7 +547,7 @@ def update_nodes_history(db, summaries: list, round_id: int):
             new_score = old_score or NODE_DEFAULT_SCORE
             new_state = state or 'testing'
             if state == 'testing':
-                delta = calc_round_delta(present=True, cons_apps=cons_apps, speed_kbps=speed)
+                delta = calc_round_delta(present=True, cons_apps=cons_apps, speed_kbps=speed, cn_latency_ms=cn_lat)
                 new_score = max(0.0, min(100.0, new_score + delta))
                 if new_score >= 100:
                     new_score = 100.0
@@ -617,7 +617,14 @@ PASSIVE_JITTER = 0.3                 # ±0.3 抖动
 NODE_PRESENT_BONUS = 1               # v3.0: 本轮出现 +1
 NODE_ABSENT_PENALTY = 3              # 本轮未出现 -3 (避免冤死, 仅近期还活的节点)
 
-# 信号 C (测速, v3.0 五档)
+# 信号 C (CN 代理延迟优先, 回退到 subs-check 测速)
+# 延迟档位 (CN 代理 TCP+TLS 握手时间):
+NODE_LATENCY_EXCEL_BONUS = 3         # < 100ms
+NODE_LATENCY_GOOD_BONUS = 1          # 100-300ms
+NODE_LATENCY_OK_BONUS = 0            # 300-800ms
+NODE_LATENCY_POOR_PENALTY = 2        # 800-2000ms
+NODE_LATENCY_TERRIBLE_PENALTY = 5    # > 2000ms
+# 回退: subs-check 直连测速档
 NODE_SPEED_EXCEL_BONUS = 3           # >= 2048 KB/s
 NODE_SPEED_GOOD_BONUS = 1            # 1024-2047 KB/s
 NODE_SPEED_OK_BONUS = 0              # 512-1023 KB/s
@@ -631,10 +638,10 @@ def calc_quality_score(*args, **kwargs) -> float:
     return NODE_DEFAULT_SCORE
 
 
-def calc_round_delta(present: bool, cons_apps: int, speed_kbps) -> float:
-    """v3.0 信号 B (轮次) + 信号 C (测速) 单轮 delta.
+def calc_round_delta(present: bool, cons_apps: int, speed_kbps, cn_latency_ms: float = 0) -> float:
+    """v3.0 信号 B (轮次) + 信号 C (CN代理延迟/测速) 单轮 delta.
 
-    explicit None 测速 = TIMEOUT (节点没测出速度, 视为故障); 0 也算 TIMEOUT.
+    信号 C 优先用 CN 代理延迟 (cn_latency_ms), 回退到 subs-check 直连测速 (speed_kbps).
     探活 (信号 A) 由 incremental-check.py 直接更新, 不在此处.
     """
     delta = 0.0
@@ -645,8 +652,19 @@ def calc_round_delta(present: bool, cons_apps: int, speed_kbps) -> float:
         delta -= NODE_ABSENT_PENALTY
         return delta  # 未出现的没有测速信号
 
-    # 信号 C: 测速 (本轮出现, 未测速 = TIMEOUT)
-    if speed_kbps is None or speed_kbps <= 0:
+    # 信号 C: CN 代理延迟优先
+    if cn_latency_ms and cn_latency_ms > 0:
+        if cn_latency_ms < 100:
+            delta += NODE_LATENCY_EXCEL_BONUS
+        elif cn_latency_ms < 300:
+            delta += NODE_LATENCY_GOOD_BONUS
+        elif cn_latency_ms < 800:
+            delta += NODE_LATENCY_OK_BONUS
+        elif cn_latency_ms < 2000:
+            delta -= NODE_LATENCY_POOR_PENALTY
+        else:
+            delta -= NODE_LATENCY_TERRIBLE_PENALTY
+    elif speed_kbps is None or speed_kbps <= 0:
         delta -= NODE_SPEED_TIMEOUT_PENALTY
     elif speed_kbps >= 2048:
         delta += NODE_SPEED_EXCEL_BONUS
