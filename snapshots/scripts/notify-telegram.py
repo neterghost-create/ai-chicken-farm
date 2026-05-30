@@ -93,6 +93,13 @@ def main():
 
     rid, ts, tot, protos_json, da, dr, dk = row
 
+    # 没变化就不推 (token 内容相同, 用户不需要重复通知)
+    if da == 0 and dr == 0:
+        db.execute("UPDATE rounds SET notified = 1 WHERE round_id = ?", (rid,))
+        db.commit()
+        print(f"  ⏭️  round_id={rid} diff 全零, 跳过推送")
+        return 0
+
     # 上一轮 (round_id - 1)
     prev_row = db.execute("""
         SELECT total_nodes FROM rounds WHERE round_id < ? ORDER BY round_id DESC LIMIT 1
